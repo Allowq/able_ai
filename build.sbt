@@ -10,8 +10,8 @@ lazy val root =
       crossPaths := false,
       autoScalaLibrary := false,
       mainClass in Compile := (mainClass in Compile in tensorFlow).value,
+      assemblySettings
     )
-    .disablePlugins(AssemblyPlugin)
     .aggregate(tensorFlow)
 
 lazy val dl4j =
@@ -48,8 +48,8 @@ lazy val tensorFlow =
         library.tensorFlowData,
         library.protobufScala
       ),
-      mainClass in (Compile, packageBin) := Some("ru.able.examples.ObjectDetector"),
       mainClass in (Compile, run) := Some("ru.able.examples.ObjectDetector"),
+      mainClass in assembly := Some("ru.able.examples.ObjectDetector"),
       resourceDirectory in Compile := file(".") / ".src/main/resources",
       resourceDirectory in Runtime := file(".") / ".src/main/resources",
       fork := true, // prevent classloader issues caused by sbt and opencv
@@ -95,14 +95,34 @@ lazy val library =
 // Assembly settings
 // *****************************************************************************
 
+import sbtassembly.AssemblyPlugin.defaultShellScript
+
 lazy val assemblySettings = Seq(
-  assemblyJarName in assembly := name.value + ".jar",
+  assemblyOption in assembly := (assemblyOption in assembly).value.copy(cacheUnzip = false),
+  assemblyOption in assembly := (assemblyOption in assembly).value.copy(cacheOutput = false),
+  assemblyOption in assembly := (assemblyOption in assembly).value.copy(prependShellScript = Some(defaultShellScript)),
+  assemblyJarName in assembly := s"${name.value}-${version.value}.jar",
+
   assemblyMergeStrategy in assembly := {
-    case PathList("META-INF", xs @ _*) => MergeStrategy.discard
-    case "application.conf"            => MergeStrategy.concat
-    case x =>
-      val oldStrategy = (assemblyMergeStrategy in assembly).value
-      oldStrategy(x)
+    case x if Assembly.isConfigFile(x) =>
+      MergeStrategy.concat
+    case PathList(ps @ _*) if Assembly.isReadme(ps.last) || Assembly.isLicenseFile(ps.last) =>
+      MergeStrategy.rename
+    case PathList("META-INF", xs @ _*) =>
+      (xs map {_.toLowerCase}) match {
+        case ("manifest.mf" :: Nil) | ("index.list" :: Nil) | ("dependencies" :: Nil) =>
+          MergeStrategy.discard
+        case ps @ (x :: xs) if ps.last.endsWith(".sf") || ps.last.endsWith(".dsa") =>
+          MergeStrategy.discard
+        case "plexus" :: xs =>
+          MergeStrategy.discard
+        case "services" :: xs =>
+          MergeStrategy.filterDistinctLines
+        case ("spring.schemas" :: Nil) | ("spring.handlers" :: Nil) =>
+          MergeStrategy.filterDistinctLines
+        case _ => MergeStrategy.deduplicate
+      }
+    case _ => MergeStrategy.deduplicate
   }
 )
 
@@ -131,9 +151,6 @@ lazy val commonSettings = Seq(
   exportJars := true,
   autoAPIMappings := true,
   parallelExecution := false,
-
-  unmanagedSourceDirectories.in(Compile) := Seq(scalaSource.in(Compile).value),
-  unmanagedSourceDirectories.in(Test) := Seq(scalaSource.in(Test).value),
   resolvers ++= Seq(
     Resolver.sonatypeRepo("releases"),
     Resolver.sonatypeRepo("snapshots")
