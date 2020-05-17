@@ -40,6 +40,9 @@ lazy val tensorFlow =
       PB.targets in Compile := Seq(
         scalapb.gen() -> (sourceManaged in Compile).value
       ),
+      javaCppPresetLibs ++= Seq(
+        "ffmpeg" -> "3.4.1"
+      ),
       libraryDependencies ++= Seq(
         library.betterFiles,
         library.janino,

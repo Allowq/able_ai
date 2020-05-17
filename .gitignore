@@ -2,8 +2,7 @@
 *.class
 =======
 # Common
-/data/models/*
-/data/iris.csv
+/data
 /dl4j/target/*
 /protobuf/*
 /tensorflow/target/*

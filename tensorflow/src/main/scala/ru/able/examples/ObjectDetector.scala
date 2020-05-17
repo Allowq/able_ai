@@ -1,19 +1,3 @@
-/*
- * Copyright 2017 Able AI
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package ru.able.examples
 
 import java.io.{BufferedInputStream, File, FileInputStream}
@@ -32,20 +16,10 @@ import org.tensorflow.framework.GraphDef
 import scala.collection.Iterator.continually
 import scala.io.Source
 
+import ru.able.utils.common
+
 case class DetectionOutput(boxes: Tensor, scores: Tensor, classes: Tensor, num: Tensor)
 
-/**
-  * This example shows how to run a pretrained TensorFlow object detection model i.e. one from
-  * https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md
-  *
-  * You have to download and extract the model you want to run first, like so:
-  * $ cd tensorflow
-  * $ mkdir models && cd models
-  * $ wget http://download.tensorflow.org/models/object_detection/ssd_inception_v2_coco_2017_11_17.tar.gz
-  * $ tar xzf ssd_inception_v2_coco_2017_11_17.tar.gz
-  *
-  * @author Sören Brunk
-  */
 object ObjectDetector {
 
   val logger = LoggerFactory.getLogger(getClass)
@@ -58,7 +32,7 @@ object ObjectDetector {
           |Usage: ObjectDetector image <file>|video <file>|camera <deviceno> [<modelpath>]
           |  <file>      path to an image/video file
           |  <deviceno>  camera device number (usually starts with 0)
-          |  <modelpath> optional path to the object detection model to be used. Default: ssd_inception_v2_coco_2017_11_17
+          |  <modeldir>  optional path to the object detection model to be used. Default: ssd_inception_v2_coco_2018_01_28
           |""".stripMargin.trim)
       sys.exit(2)
     }
@@ -67,16 +41,14 @@ object ObjectDetector {
 
     lazy val defaultModelsPath = System.getProperty("user.dir") + "/data/models"
     val modelsDir = args.lift(2).getOrElse(defaultModelsPath)
-
-    // ssd_inception_v2_coco_2018_01_28
+    val modelGraph = common.describeModel(modelsDir)
 
     // load a pretrained detection model as TensorFlow graph
     val graphDef = GraphDef.parseFrom(
       new BufferedInputStream(
         new FileInputStream(
           new File(
-            modelsDir,
-            "/ssd_inception_v2_coco_2018_01_28/frozen_inference_graph.pb"
+            modelGraph.getOrElse(modelsDir + "/ssd_inception_v2_coco_2018_01_28/frozen_inference_graph.pb")
           )
         )
       )
@@ -106,26 +78,9 @@ object ObjectDetector {
       case "camera" =>
         val cameraDevice = Integer.parseInt(args(1))
         val grabber = new OpenCVFrameGrabber(cameraDevice)
-//        val grabber = getTrueGrabber.getOrElse(new OpenCVFrameGrabber(cameraDevice))
         detectSequence(grabber, graph, session, labelMap)
       case _ => printUsageAndExit()
     }
-  }
-
-  def getTrueGrabber: Option[OpenCVFrameGrabber] = {
-    for (cameraIndex <- 0 until 1500) {
-      try {
-        val grabber = new OpenCVFrameGrabber(cameraIndex)
-        Thread.sleep(100)
-        grabber.trigger()
-        println(s"True index is $cameraIndex")
-        return Some(grabber)
-      } catch {
-        case ex: Exception => logger.warn(ex.toString)
-      }
-    }
-    println(s"True index could not find")
-    None
   }
 
   // convert OpenCV tensor to TensorFlow tensor
