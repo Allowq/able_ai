@@ -16,7 +16,7 @@ import org.tensorflow.framework.GraphDef
 import scala.collection.Iterator.continually
 import scala.io.Source
 
-import ru.able.utils.common
+import ru.able.model.TFModel
 
 case class DetectionOutput(boxes: Tensor, scores: Tensor, classes: Tensor, num: Tensor)
 
@@ -39,17 +39,22 @@ object ObjectDetector {
 
     if (args.length < 2) printUsageAndExit()
 
-    lazy val defaultModelsPath = System.getProperty("user.dir") + "/data/models"
+    lazy val defaultModelsPath = System.getProperty("user.dir") + "/data/models/default"
     val modelsDir = args.lift(2).getOrElse(defaultModelsPath)
-    val modelGraph = common.describeModel(modelsDir)
+
+    val tfModel = TFModel.describeModel(modelsDir) match {
+      case Some(tf) => tf
+      case _ => TFModel(
+        defaultModelsPath + "/ssd_inception_v2_coco_2018_01_28/frozen_inference_graph.pb",
+        defaultModelsPath + "/mscoco_label_map.pbtxt"
+      )
+    }
 
     // load a pretrained detection model as TensorFlow graph
     val graphDef = GraphDef.parseFrom(
       new BufferedInputStream(
         new FileInputStream(
-          new File(
-            modelGraph.getOrElse(modelsDir + "/ssd_inception_v2_coco_2018_01_28/frozen_inference_graph.pb")
-          )
+          new File(tfModel.frozenGraphProtoPath)
         )
       )
     )
@@ -60,7 +65,7 @@ object ObjectDetector {
 
     // load the protobuf label map containing the class number to string label mapping (from COCO)
     val labelMap: Map[Int, String] = {
-      val pbText = Source.fromFile(modelsDir + "/mscoco_label_map.pbtxt").mkString
+      val pbText = Source.fromFile(tfModel.graphProtoPath).mkString
       val stringIntLabelMap = StringIntLabelMap.fromAscii(pbText)
       stringIntLabelMap.item.collect {
         case StringIntLabelMapItem(_, Some(id), Some(displayName)) => id -> displayName
@@ -88,7 +93,7 @@ object ObjectDetector {
     val imageRGB = new Mat
     cvtColor(image, imageRGB, COLOR_BGR2RGB) // convert channels from OpenCV GBR to RGB
     val imgBuffer = imageRGB.createBuffer[ByteBuffer]
-    val shape = Shape(1, image.size.height, image.size.width(), image.channels)
+    val shape = Shape(1, image.size.height, image.size.width, image.channels)
     Tensor.fromBuffer(UINT8, shape, imgBuffer.capacity, imgBuffer)
   }
 
@@ -106,12 +111,13 @@ object ObjectDetector {
 
   // run detector on an image sequence
   def detectSequence(grabber: FrameGrabber, graph: Graph, session: Session, labelMap: Map[Int, String]): Unit = {
-    val canvasFrame = new CanvasFrame("Object Detection", CanvasFrame.getDefaultGamma / grabber.getGamma)
+    val canvasFrame = new CanvasFrame("Able AI Catcher", CanvasFrame.getDefaultGamma / grabber.getGamma)
     canvasFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE) // exit when the canvas frame is closed
     val converter = new OpenCVFrameConverter.ToMat()
     grabber.start()
-    for (frame <- continually(grabber.grab()).takeWhile(_ != null
-      && (grabber.getLengthInFrames == 0 || grabber.getFrameNumber < grabber.getLengthInFrames))) {
+    for (frame <- continually(grabber.grab())
+      .takeWhile(_ != null && (grabber.getLengthInFrames == 0 || grabber.getFrameNumber < grabber.getLengthInFrames)))
+    {
       val image = converter.convert(frame)
       if (image != null) { // sometimes the first few frames are empty so we ignore them
         val detectionOutput = detect(matToTensor(image), graph, session) // run our model
