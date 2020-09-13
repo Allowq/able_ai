@@ -13,11 +13,7 @@ import ru.able.model.DetectionOutput
 
 import scala.collection.Iterator.continually
 
-final class DetectorView private (private val _controller: DetectorController) {
-
-  def this(refController: DetectorController) {
-    this(refController)
-  }
+final class DetectorView (val controller: DetectorController) {
 
   // run detector on a single image
   def detectOnImage(pathToImage: String): Unit = {
@@ -25,7 +21,7 @@ final class DetectorView private (private val _controller: DetectorController) {
     val canvasFrame = new CanvasFrame("Object Detection")
     canvasFrame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE) // exit when the canvas frame is closed
     canvasFrame.setCanvasSize(image.size.width, image.size.height)
-    val detectionOutput = _controller.detect(matToTensor(image))
+    val detectionOutput = controller.detect(matToTensor(image))
     drawBoundingBoxes(image, detectionOutput)
     canvasFrame.showImage(new OpenCVFrameConverter.ToMat().convert(image))
     canvasFrame.waitKey(0)
@@ -53,7 +49,7 @@ final class DetectorView private (private val _controller: DetectorController) {
     {
       val image = converter.convert(frame)
       if (image != null) { // sometimes the first few frames are empty so we ignore them
-        val detectionOutput = _controller.detect(matToTensor(image)) // run our model
+        val detectionOutput = controller.detect(matToTensor(image)) // run our model
         drawBoundingBoxes(image, detectionOutput)
         if (canvasFrame.isVisible) { // show our frame in the preview
           canvasFrame.showImage(frame)
@@ -85,7 +81,7 @@ final class DetectorView private (private val _controller: DetectorController) {
         val xmin = (box(1) * image.size().width()).toInt
         val ymax = (box(2) * image.size().height()).toInt
         val xmax = (box(3) * image.size().width()).toInt
-        val label = _controller.getLabel(detectionOutput.classes(0, i).scalar.asInstanceOf[Float].toInt)
+        val label = controller.getLabel(detectionOutput.classes(0, i).scalar.asInstanceOf[Float].toInt)
 
         // draw score value
         putText(image,

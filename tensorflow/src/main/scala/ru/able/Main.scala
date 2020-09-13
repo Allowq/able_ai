@@ -1,11 +1,10 @@
-package ru.able.examples
+package ru.able
 
 import org.slf4j.LoggerFactory
-
-import ru.able.view.DetectorView
 import ru.able.controller.DetectorController
+import ru.able.view.DetectorView
 
-object ObjectDetector {
+object Main {
 
   val logger = LoggerFactory.getLogger(getClass)
 

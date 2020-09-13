@@ -51,8 +51,8 @@ lazy val tensorFlow =
         library.tensorFlowData,
         library.protobufScala
       ),
-      mainClass in (Compile, run) := Some("ru.able.examples.ObjectDetector"),
-      mainClass in assembly := Some("ru.able.examples.ObjectDetector"),
+      mainClass in (Compile, run) := Some("ru.able.Main"),
+      mainClass in assembly := Some("ru.able.Main"),
       resourceDirectory in Compile := file(".") / ".src/main/resources",
       resourceDirectory in Runtime := file(".") / ".src/main/resources",
       fork := true, // prevent classloader issues caused by sbt and opencv
