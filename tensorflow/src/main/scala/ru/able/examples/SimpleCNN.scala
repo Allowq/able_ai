@@ -24,7 +24,7 @@ import org.platanios.tensorflow.api.{DataType, _}
 import org.platanios.tensorflow.api.ops.NN.ValidConvPadding
 import org.slf4j.LoggerFactory
 import better.files._
-import javax.swing.JFrame
+import javax.swing.WindowConstants
 import org.bytedeco.javacpp.opencv_core.{Mat, Point, Scalar}
 import org.bytedeco.javacpp.opencv_imgproc.{COLOR_BGR2RGB, cvtColor, resize}
 import org.bytedeco.javacv._
@@ -194,7 +194,7 @@ object SimpleCNN {
       // run detector on a single image
       def detectImage(image: Mat): Unit = {
         val canvasFrame = new CanvasFrame("Logo Classifier")
-        canvasFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE) // exit when the canvas frame is closed
+        canvasFrame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE) // exit when the canvas frame is closed
         canvasFrame.setCanvasSize(image.size.width, image.size.height)
 
         val imageTensor = matToTensor(image)
@@ -221,7 +221,7 @@ object SimpleCNN {
       // run detector on an image sequence
       def detectSequence(grabber: FrameGrabber): Unit = {
         val canvasFrame = new CanvasFrame("Logo Classifier", CanvasFrame.getDefaultGamma / grabber.getGamma)
-        canvasFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE) // exit when the canvas frame is closed
+        canvasFrame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE) // exit when the canvas frame is closed
         val converter = new OpenCVFrameConverter.ToMat()
         grabber.start()
         for (frame <- continually(grabber.grab()).takeWhile(_ != null

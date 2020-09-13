@@ -1,24 +1,9 @@
 package ru.able.examples
 
-import java.io.{BufferedInputStream, File, FileInputStream}
-import java.nio.ByteBuffer
-
-import javax.swing.JFrame
-import object_detection.protos.string_int_label_map.{StringIntLabelMap, StringIntLabelMapItem}
-import org.bytedeco.javacpp.opencv_core.{FONT_HERSHEY_PLAIN, LINE_AA, Mat, Point, Scalar}
-import org.bytedeco.javacpp.opencv_imgcodecs._
-import org.bytedeco.javacpp.opencv_imgproc.{COLOR_BGR2RGB, cvtColor, putText, rectangle}
-import org.bytedeco.javacv.{CanvasFrame, FFmpegFrameGrabber, FrameGrabber, OpenCVFrameConverter, OpenCVFrameGrabber}
-import org.platanios.tensorflow.api.{Graph, Session, Shape, Tensor, UINT8}
 import org.slf4j.LoggerFactory
-import org.tensorflow.framework.GraphDef
 
-import scala.collection.Iterator.continually
-import scala.io.Source
-
-import ru.able.model.TFModel
-
-case class DetectionOutput(boxes: Tensor, scores: Tensor, classes: Tensor, num: Tensor)
+import ru.able.view.DetectorView
+import ru.able.controller.DetectorController
 
 object ObjectDetector {
 
@@ -39,166 +24,18 @@ object ObjectDetector {
 
     if (args.length < 2) printUsageAndExit()
 
-    lazy val defaultModelsPath = System.getProperty("user.dir") + "/data/models/default"
-    val modelsDir = args.lift(2).getOrElse(defaultModelsPath)
-
-    val tfModel = TFModel.describeModel(modelsDir) match {
-      case Some(tf) => tf
-      case _ => TFModel(
-        defaultModelsPath + "/ssd_inception_v2_coco_2018_01_28/frozen_inference_graph.pb",
-        defaultModelsPath + "/mscoco_label_map.pbtxt"
-      )
-    }
-
-    // load a pretrained detection model as TensorFlow graph
-    val graphDef = GraphDef.parseFrom(
-      new BufferedInputStream(
-        new FileInputStream(
-          new File(tfModel.frozenGraphProtoPath)
-        )
-      )
-    )
-    val graph = Graph.fromGraphDef(graphDef)
-
-    // create a session and add our pretrained graph to it
-    val session = Session(graph)
-
-    // load the protobuf label map containing the class number to string label mapping (from COCO)
-    val labelMap: Map[Int, String] = {
-      val pbText = Source.fromFile(tfModel.graphProtoPath).mkString
-      val stringIntLabelMap = StringIntLabelMap.fromAscii(pbText)
-      stringIntLabelMap.item.collect {
-        case StringIntLabelMapItem(_, Some(id), Some(displayName)) => id -> displayName
-      }.toMap
-    }
+    val detectorController: DetectorController = new DetectorController(args.lift(2))
+    val detector: DetectorView = new DetectorView(detectorController)
 
     val inputType = args(0)
     inputType match {
       case "image" =>
-        val image = imread(args(1))
-        detectImage(image, graph, session, labelMap)
+        detector.detectOnImage(args(1))
       case "video" =>
-        val grabber = new FFmpegFrameGrabber(args(1))
-        detectSequence(grabber, graph, session, labelMap)
+        detector.detectOnVideo(args(1))
       case "camera" =>
-        val cameraDevice = Integer.parseInt(args(1))
-        val grabber = new OpenCVFrameGrabber(cameraDevice)
-        detectSequence(grabber, graph, session, labelMap)
+        detector.detectFromCamera(Integer.parseInt(args(1)))
       case _ => printUsageAndExit()
-    }
-  }
-
-  // convert OpenCV tensor to TensorFlow tensor
-  def matToTensor(image: Mat): Tensor = {
-    val imageRGB = new Mat
-    cvtColor(image, imageRGB, COLOR_BGR2RGB) // convert channels from OpenCV GBR to RGB
-    val imgBuffer = imageRGB.createBuffer[ByteBuffer]
-    val shape = Shape(1, image.size.height, image.size.width, image.channels)
-    Tensor.fromBuffer(UINT8, shape, imgBuffer.capacity, imgBuffer)
-  }
-
-  // run detector on a single image
-  def detectImage(image: Mat, graph: Graph, session: Session, labelMap: Map[Int, String]): Unit = {
-    val canvasFrame = new CanvasFrame("Object Detection")
-    canvasFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE) // exit when the canvas frame is closed
-    canvasFrame.setCanvasSize(image.size.width, image.size.height)
-    val detectionOutput = detect(matToTensor(image), graph, session)
-    drawBoundingBoxes(image, labelMap, detectionOutput)
-    canvasFrame.showImage(new OpenCVFrameConverter.ToMat().convert(image))
-    canvasFrame.waitKey(0)
-    canvasFrame.dispose()
-  }
-
-  // run detector on an image sequence
-  def detectSequence(grabber: FrameGrabber, graph: Graph, session: Session, labelMap: Map[Int, String]): Unit = {
-    val canvasFrame = new CanvasFrame("Able AI Catcher", CanvasFrame.getDefaultGamma / grabber.getGamma)
-    canvasFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE) // exit when the canvas frame is closed
-    val converter = new OpenCVFrameConverter.ToMat()
-    grabber.start()
-    for (frame <- continually(grabber.grab())
-      .takeWhile(_ != null && (grabber.getLengthInFrames == 0 || grabber.getFrameNumber < grabber.getLengthInFrames)))
-    {
-      val image = converter.convert(frame)
-      if (image != null) { // sometimes the first few frames are empty so we ignore them
-        val detectionOutput = detect(matToTensor(image), graph, session) // run our model
-        drawBoundingBoxes(image, labelMap, detectionOutput)
-        if (canvasFrame.isVisible) { // show our frame in the preview
-          canvasFrame.showImage(frame)
-        }
-      }
-    }
-    canvasFrame.dispose()
-    grabber.stop()
-  }
-
-  // run the object detection model on an image
-  def detect(image: Tensor, graph: Graph, session: Session): DetectionOutput = {
-
-    // retrieve the output placeholders
-    val imagePlaceholder = graph.getOutputByName("image_tensor:0")
-    val detectionBoxes = graph.getOutputByName("detection_boxes:0")
-    val detectionScores = graph.getOutputByName("detection_scores:0")
-    val detectionClasses = graph.getOutputByName("detection_classes:0")
-    val numDetections = graph.getOutputByName("num_detections:0")
-
-    // set image as input parameter
-    val feeds = Map(imagePlaceholder -> image)
-
-    // Run the detection model
-    val Seq(boxes, scores, classes, num) =
-      session.run(fetches = Seq(detectionBoxes, detectionScores, detectionClasses, numDetections), feeds = feeds)
-    DetectionOutput(boxes, scores, classes, num)
-  }
-
-  // draw boxes with class and score around detected objects
-  def drawBoundingBoxes(image: Mat, labelMap: Map[Int, String], detectionOutput: DetectionOutput): Unit = {
-    for (i <- 0 until detectionOutput.boxes.shape.size(1)) {
-      val score = detectionOutput.scores(0, i).scalar.asInstanceOf[Float]
-
-      if (score > 0.5) {
-        val box = detectionOutput.boxes(0, i).entriesIterator.map(_.asInstanceOf[Float]).toSeq
-        // we have to scale the box coordinates to the image size
-        val ymin = (box(0) * image.size().height()).toInt
-        val xmin = (box(1) * image.size().width()).toInt
-        val ymax = (box(2) * image.size().height()).toInt
-        val xmax = (box(3) * image.size().width()).toInt
-        val label = labelMap.getOrElse(detectionOutput.classes(0, i).scalar.asInstanceOf[Float].toInt, "unknown")
-
-        // draw score value
-        putText(image,
-          f"$label%s ($score%1.2f)", // text
-          new Point(xmin + 6, ymin + 38), // text position
-          FONT_HERSHEY_PLAIN, // font type
-          2.6, // font scale
-          new Scalar(0, 0, 0, 0), // text color
-          4, // text thickness
-          LINE_AA, // line type
-          false) // origin is at the top-left corner
-        putText(image,
-          f"$label%s ($score%1.2f)", // text
-          new Point(xmin + 4, ymin + 36), // text position
-          FONT_HERSHEY_PLAIN, // font type
-          2.6, // font scale
-          new Scalar(0, 230, 255, 0), // text color
-          4, // text thickness
-          LINE_AA, // line type
-          false) // origin is at the top-left corner
-        // draw bounding box
-        rectangle(image,
-          new Point(xmin + 1, ymin + 1), // upper left corner
-          new Point(xmax + 1, ymax + 1), // lower right corner
-          new Scalar(0, 0, 0, 0), // color
-          2, // thickness
-          0, // lineType
-          0) // shift
-        rectangle(image,
-          new Point(xmin, ymin), // upper left corner
-          new Point(xmax, ymax), // lower right corner
-          new Scalar(0, 230, 255, 0), // color
-          2, // thickness
-          0, // lineType
-          0) // shift
-      }
     }
   }
 }
