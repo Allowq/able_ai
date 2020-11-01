@@ -2,26 +2,41 @@ package ru.able.view
 
 import java.nio.ByteBuffer
 
+import akka.Done
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
+import akka.stream.scaladsl.{Flow, Sink}
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import javax.swing.WindowConstants
 import org.bytedeco.javacpp.opencv_core.{FONT_HERSHEY_PLAIN, LINE_AA, Mat, Point, Scalar}
-import org.bytedeco.javacpp.opencv_imgcodecs.imread
 import org.bytedeco.javacpp.opencv_imgproc.{COLOR_BGR2RGB, cvtColor, putText, rectangle}
 import org.bytedeco.javacv.{CanvasFrame, FFmpegFrameGrabber, FrameGrabber, OpenCVFrameConverter, OpenCVFrameGrabber}
-import org.platanios.tensorflow.api.{Shape, Tensor, UINT8}
-import ru.able.controller.DetectorController
+import ru.able.controller.{DetectorController, Flip, MediaConversion}
 import ru.able.model.DetectionOutput
 
 import scala.collection.Iterator.continually
+import scala.concurrent.Future
+
+class DetectorActorDescription extends Actor with ActorLogging {
+  var stageActor: ActorRef = _
+
+  override def receive: Receive = {
+    case r: ActorRef =>
+      stageActor = r
+      log.info("received stage actorRef")
+  }
+}
 
 final class DetectorView (val controller: DetectorController) {
 
   // run detector on a single image
   def detectOnImage(pathToImage: String): Unit = {
-    val image = imread(pathToImage)
-    val canvasFrame = new CanvasFrame("Object Detection")
+    val canvasFrame = new CanvasFrame("Able AICatcher")
     canvasFrame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE) // exit when the canvas frame is closed
+
+    val image = controller.getImageByPath(pathToImage)
     canvasFrame.setCanvasSize(image.size.width, image.size.height)
-    val detectionOutput = controller.detect(matToTensor(image))
+
+    val detectionOutput = controller.detectOnImage(image)
     drawBoundingBoxes(image, detectionOutput)
     canvasFrame.showImage(new OpenCVFrameConverter.ToMat().convert(image))
     canvasFrame.waitKey(0)
@@ -29,44 +44,51 @@ final class DetectorView (val controller: DetectorController) {
   }
 
   def detectOnVideo(pathToVideo: String): Unit = {
-    val grabber = new FFmpegFrameGrabber(pathToVideo)
-    detectSequence(grabber)
+    val canvasFrame = new CanvasFrame("Able AI Catcher")
+    canvasFrame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE) // exit when the canvas frame is closed
+
+    implicit val system = ActorSystem()
+    val decider: Supervision.Decider ={
+      case _: Exception =>
+        Supervision.Resume
+    }
+
+    implicit val mat = ActorMaterializer(ActorMaterializerSettings(system).withSupervisionStrategy(decider))
+    val videoSource = controller.sourceVideo(pathToVideo)
+        .map(MediaConversion.toMat)
+        .map(Flip.horizontal)
+        .map(img => {
+          drawBoundingBoxes(img, controller.detectOnImage(img))
+          img
+        })
+        .map(MediaConversion.toFrame)
+        .map(canvasFrame.showImage)
+        .to(Sink.ignore)
+    videoSource.run()
   }
 
   def detectFromCamera(cameraDeviceIdx: Int): Unit = {
-    val grabber = new OpenCVFrameGrabber(cameraDeviceIdx)
-    detectSequence(grabber)
-  }
-
-  // run detector on an image sequence
-  private def detectSequence(grabber: FrameGrabber): Unit = {
-    val canvasFrame = new CanvasFrame("Able AI Catcher", CanvasFrame.getDefaultGamma / grabber.getGamma)
+    val canvasFrame = new CanvasFrame("Able AI Catcher")
     canvasFrame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE) // exit when the canvas frame is closed
-    val converter = new OpenCVFrameConverter.ToMat()
-    grabber.start()
-    for (frame <- continually(grabber.grab())
-      .takeWhile(_ != null && (grabber.getLengthInFrames == 0 || grabber.getFrameNumber < grabber.getLengthInFrames)))
-    {
-      val image = converter.convert(frame)
-      if (image != null) { // sometimes the first few frames are empty so we ignore them
-        val detectionOutput = controller.detect(matToTensor(image)) // run our model
-        drawBoundingBoxes(image, detectionOutput)
-        if (canvasFrame.isVisible) { // show our frame in the preview
-          canvasFrame.showImage(frame)
-        }
-      }
-    }
-    canvasFrame.dispose()
-    grabber.stop()
-  }
 
-  // convert OpenCV tensor to TensorFlow tensor
-  private def matToTensor(image: Mat): Tensor = {
-    val imageRGB = new Mat
-    cvtColor(image, imageRGB, COLOR_BGR2RGB) // convert channels from OpenCV GBR to RGB
-    val imgBuffer = imageRGB.createBuffer[ByteBuffer]
-    val shape = Shape(1, image.size.height, image.size.width, image.channels)
-    Tensor.fromBuffer(UINT8, shape, imgBuffer.capacity, imgBuffer)
+    implicit val system = ActorSystem()
+    val decider: Supervision.Decider ={
+      case _: Exception =>
+        Supervision.Resume
+    }
+
+    implicit val mat = ActorMaterializer(ActorMaterializerSettings(system).withSupervisionStrategy(decider))
+    val cameraSource = controller.sourceCamera(cameraDeviceIdx)
+      .map(MediaConversion.toMat)
+      .map(Flip.horizontal)
+      .map(img => {
+        drawBoundingBoxes(img, controller.detectOnImage(img))
+        img
+      })
+      .map(MediaConversion.toFrame)
+      .map(canvasFrame.showImage)
+      .to(Sink.ignore)
+    cameraSource.run()
   }
 
   // draw boxes with class and score around detected objects

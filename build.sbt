@@ -49,7 +49,8 @@ lazy val tensorFlow =
         library.logbackClassic,
         library.tensorFlow,
         library.tensorFlowData,
-        library.protobufScala
+        library.protobufScala,
+        library.akkaScala
       ),
       mainClass in (Compile, run) := Some("ru.able.Main"),
       mainClass in assembly := Some("ru.able.Main"),
@@ -78,6 +79,7 @@ lazy val library =
       val scalaTest  =      "3.0.4"
       val tensorFlow =      "0.2.4"
       val protobufVersion = "0.7.4"
+      val akkaVersion =     "2.6.10"
     }
     val betterFiles =         "com.github.pathikrit"  %% "better-files"           % Version.betterFiles
     val dl4j =                "org.deeplearning4j"    % "deeplearning4j-core"     % Version.dl4j
@@ -92,6 +94,7 @@ lazy val library =
     val tensorFlow =          "org.platanios"         %% "tensorflow"             % Version.tensorFlow classifier tensorflow_classifier
     val tensorFlowData =      "org.platanios"         %% "tensorflow-data"        % Version.tensorFlow
     val protobufScala =       "com.thesamet.scalapb"  %% "scalapb-runtime"        % Version.protobufVersion % "protobuf"
+    val akkaScala =           "com.typesafe.akka"     %% "akka-stream"            % Version.akkaVersion
   }
 
 // *****************************************************************************
