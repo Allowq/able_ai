@@ -126,9 +126,11 @@ lazy val assemblySettings = Seq(
           MergeStrategy.filterDistinctLines
         case ("spring.schemas" :: Nil) | ("spring.handlers" :: Nil) =>
           MergeStrategy.filterDistinctLines
-        case _ => MergeStrategy.deduplicate
+//        case _ => MergeStrategy.deduplicate
+        case _ => MergeStrategy.first
       }
-    case _ => MergeStrategy.deduplicate
+//    case _ => MergeStrategy.deduplicate
+    case _ => MergeStrategy.first
   }
 )
 

@@ -1,20 +1,14 @@
 package ru.able.view
 
-import java.nio.ByteBuffer
-
-import akka.Done
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
-import akka.stream.scaladsl.{Flow, Sink}
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem}
+import akka.stream.scaladsl.Sink
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import javax.swing.WindowConstants
 import org.bytedeco.javacpp.opencv_core.{FONT_HERSHEY_PLAIN, LINE_AA, Mat, Point, Scalar}
-import org.bytedeco.javacpp.opencv_imgproc.{COLOR_BGR2RGB, cvtColor, putText, rectangle}
-import org.bytedeco.javacv.{CanvasFrame, FFmpegFrameGrabber, FrameGrabber, OpenCVFrameConverter, OpenCVFrameGrabber}
+import org.bytedeco.javacpp.opencv_imgproc.{putText, rectangle}
+import org.bytedeco.javacv.{CanvasFrame, OpenCVFrameConverter}
 import ru.able.controller.{DetectorController, Flip, MediaConversion}
 import ru.able.model.DetectionOutput
-
-import scala.collection.Iterator.continually
-import scala.concurrent.Future
 
 class DetectorActorDescription extends Actor with ActorLogging {
   var stageActor: ActorRef = _
