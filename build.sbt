@@ -50,7 +50,8 @@ lazy val tensorFlow =
         library.tensorFlow,
         library.tensorFlowData,
         library.protobufScala,
-        library.akkaScala
+        library.akkaScala,
+        library.confScala
       ),
       mainClass in (Compile, run) := Some("ru.able.Main"),
       mainClass in assembly := Some("ru.able.Main"),
@@ -80,6 +81,7 @@ lazy val library =
       val tensorFlow =      "0.2.4"
       val protobufVersion = "0.7.4"
       val akkaVersion =     "2.6.10"
+      val confScala =       "1.4.0"
     }
     val betterFiles =         "com.github.pathikrit"  %% "better-files"           % Version.betterFiles
     val dl4j =                "org.deeplearning4j"    % "deeplearning4j-core"     % Version.dl4j
@@ -95,6 +97,7 @@ lazy val library =
     val tensorFlowData =      "org.platanios"         %% "tensorflow-data"        % Version.tensorFlow
     val protobufScala =       "com.thesamet.scalapb"  %% "scalapb-runtime"        % Version.protobufVersion % "protobuf"
     val akkaScala =           "com.typesafe.akka"     %% "akka-stream"            % Version.akkaVersion
+    val confScala =           "com.typesafe"          % "config"                  % Version.confScala
   }
 
 // *****************************************************************************
@@ -126,10 +129,8 @@ lazy val assemblySettings = Seq(
           MergeStrategy.filterDistinctLines
         case ("spring.schemas" :: Nil) | ("spring.handlers" :: Nil) =>
           MergeStrategy.filterDistinctLines
-//        case _ => MergeStrategy.deduplicate
         case _ => MergeStrategy.first
       }
-//    case _ => MergeStrategy.deduplicate
     case _ => MergeStrategy.first
   }
 )

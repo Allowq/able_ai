@@ -6,12 +6,11 @@ import java.nio.ByteBuffer
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.Source
-import akka.stream.{Attributes, Graph, Outlet, SourceShape}
-import akka.stream.stage.{GraphStage, GraphStageLogic, OutHandler}
+import akka.stream.{Graph, SourceShape}
 import org.bytedeco.javacpp.opencv_imgcodecs.imread
 import org.bytedeco.javacpp.opencv_core.Mat
 import org.bytedeco.javacpp.opencv_imgproc.{COLOR_BGR2RGB, cvtColor}
-import org.bytedeco.javacv.{Frame, OpenCVFrameGrabber}
+import org.bytedeco.javacv.Frame
 import org.platanios.tensorflow.api.{Shape, UINT8}
 import org.platanios.tensorflow.api.Tensor
 
@@ -52,10 +51,10 @@ final class DetectorController private (private val _detectorModel: DetectorMode
     val feeds = Map(imagePlaceholder -> image)
 
     // Run the detection model
-    val Seq(boxes, scores, classes, num) =
-      _detectorModel.session.run(
-        fetches = Seq(detectionBoxes, detectionScores, detectionClasses, numDetections),
-        feeds = feeds)
+    val Seq(boxes, scores, classes, num) = _detectorModel.session.run(
+      fetches = Seq(detectionBoxes, detectionScores, detectionClasses, numDetections),
+      feeds = feeds
+    )
     DetectionOutput(boxes, scores, classes, num)
   }
 

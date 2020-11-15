@@ -1,6 +1,7 @@
 package ru.able
 
 import org.slf4j.LoggerFactory
+
 import ru.able.controller.DetectorController
 import ru.able.view.DetectorView
 

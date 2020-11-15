@@ -10,16 +10,6 @@ import org.bytedeco.javacv.{CanvasFrame, OpenCVFrameConverter}
 import ru.able.controller.{DetectorController, Flip, MediaConversion}
 import ru.able.model.DetectionOutput
 
-class DetectorActorDescription extends Actor with ActorLogging {
-  var stageActor: ActorRef = _
-
-  override def receive: Receive = {
-    case r: ActorRef =>
-      stageActor = r
-      log.info("received stage actorRef")
-  }
-}
-
 final class DetectorView (val controller: DetectorController) {
 
   // run detector on a single image
@@ -28,7 +18,7 @@ final class DetectorView (val controller: DetectorController) {
     canvasFrame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE) // exit when the canvas frame is closed
 
     val image = controller.getImageByPath(pathToImage)
-    canvasFrame.setCanvasSize(image.size.width, image.size.height)
+    canvasFrame.setCanvasSize(1280, 720)
 
     val detectionOutput = controller.detectOnImage(image)
     drawBoundingBoxes(image, detectionOutput)

@@ -1,28 +1,41 @@
 package ru.able.model
 
 import java.io.{BufferedInputStream, File, FileInputStream}
+import java.net.URL
+import sys.process._
+
+import com.typesafe.config.ConfigFactory
+
 import scala.io.Source
 import scala.util.matching.Regex
-
 import object_detection.protos.string_int_label_map.{StringIntLabelMap, StringIntLabelMapItem}
-
 import org.platanios.tensorflow.api.{Graph, Session}
 import org.tensorflow.framework.GraphDef
 
 final case object DetectorViaFileDescription {
-  def getDefaultDescriptionFolderPath: String = System.getProperty("user.dir") + "/data/models/default"
-  def getDefaultDescriptionFolder: File = new File(getDefaultDescriptionFolderPath)
+  private lazy val _config = ConfigFactory.defaultApplication().resolve().getConfig("modelDescription")
+
+  def getBaseDir: String = _config.getString("baseDir")
+  def getModelURL: String = _config.getString("modelUrl")
+  def getLabelMapURL: String = _config.getString("labelMapUrl")
+  def getArchiveFileName: String = s"${_config.getString("modelName")}.tar.gz"
+  def getModelName: String = _config.getString("modelName")
+
+  def getDefaultModelPath: String = _config.getString("defaultModelPath")
+  def getDefaultInferenceGraphPath: String = _config.getString("inferenceGraphPath")
+  def getDefaultLabelMapPath: String = _config.getString("labelMapPath")
 }
 
 class DetectorViaFileDescription {
-  private var _inferenceGraphPath: String =
-    DetectorViaFileDescription.getDefaultDescriptionFolderPath + "/ssd_inception_v2_coco_2018_01_28/frozen_inference_graph.pb"
-  private var _labelMapPath: String =
-    DetectorViaFileDescription.getDefaultDescriptionFolderPath + "/mscoco_label_map.pbtxt"
+  private var _isSpecifiedModel = false
+  private var _inferenceGraphPath: String = _
+  private var _labelMapPath: String = _
 
   def this(folderPath: Option[String] = None) = {
     this()
     folderPath.foreach(describeModel(_))
+    if (!isSpecifiedModel && downloadDefaultModel)
+      loadDefaultValues
   }
 
   def defineDetector(): DetectorModel = {
@@ -53,6 +66,7 @@ class DetectorViaFileDescription {
     )
   }
 
+  def isSpecifiedModel: Boolean = _isSpecifiedModel
   def inferenceGraphPath: String = _inferenceGraphPath
   def labelMapPath: String = _labelMapPath
 
@@ -77,9 +91,42 @@ class DetectorViaFileDescription {
       case (Some(a), Some(b)) => {
         _inferenceGraphPath = a
         _labelMapPath = b
+        _isSpecifiedModel = true
       }
       case _ => None
     }
+  }
+
+  private def downloadDefaultModel: Boolean = {
+    val defaultModelPath: String = DetectorViaFileDescription.getDefaultModelPath
+
+    if(!new File(defaultModelPath).exists()) {
+      println(s"Couldn\'t find object detection model in \'${defaultModelPath}\'")
+      if(!new File(defaultModelPath + ".tar.gz").exists()) {
+        println(s"Please waiting for download model from \'${DetectorViaFileDescription.getModelURL}\'")
+        new URL(DetectorViaFileDescription.getModelURL) #> new File(defaultModelPath + ".tar.gz") !!;
+        println(s"Downloading has finished: \'${defaultModelPath}\'")
+      }
+
+      val cmd = s"tar -xzf ${defaultModelPath}.tar.gz -C " +
+        s"${DetectorViaFileDescription.getBaseDir}"
+      cmd.!!
+    }
+
+    val defaultLabelMapPath: String = DetectorViaFileDescription.getDefaultLabelMapPath
+    if(!new File(defaultLabelMapPath).exists()) {
+      println(s"Couldn\'t find labels for model in \'${defaultLabelMapPath}\'")
+      println(s"Please waiting for download label map from \'${DetectorViaFileDescription.getLabelMapURL}\'")
+      new URL(DetectorViaFileDescription.getLabelMapURL) #> new File(defaultLabelMapPath) !!;
+      println(s"Downloading has finished: \'${defaultLabelMapPath}\'")
+    }
+
+    new File(defaultModelPath).exists()
+  }
+
+  private def loadDefaultValues: Unit = {
+    _inferenceGraphPath = DetectorViaFileDescription.getDefaultInferenceGraphPath
+    _labelMapPath = DetectorViaFileDescription.getDefaultLabelMapPath
   }
 }
 
