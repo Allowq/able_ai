@@ -1,10 +1,12 @@
 package ru.able.controller
 
-import akka.stream.{Attributes, Outlet, SourceShape}
+import akka.stream.javadsl.RunnableGraph
+import akka.stream.{Attributes, Materializer, Outlet, SourceShape}
 import akka.stream.stage.{GraphStage, GraphStageLogic, OutHandler}
 import org.bytedeco.javacv.{Frame, OpenCVFrameGrabber}
 
-private class CameraSource(cameraDeviceIdx: Int) extends GraphStage[SourceShape[Frame]] {
+private class CameraSource(cameraDeviceIdx: Int)
+                          (implicit materializer: Materializer) extends GraphStage[SourceShape[Frame]] {
   val output = Outlet[Frame]("OpenCVSource")
   override def shape: SourceShape[Frame] = SourceShape(output)
 

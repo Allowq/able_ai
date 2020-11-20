@@ -1,13 +1,12 @@
 package ru.able.controller
 
-import akka.stream.{Attributes, Outlet, SourceShape}
+import akka.stream.{Attributes, Materializer, Outlet, SourceShape}
 import akka.stream.stage.{GraphStage, GraphStageLogic, OutHandler}
 import org.bytedeco.javacv.{FFmpegFrameGrabber, Frame}
 import org.bytedeco.javacv.FrameGrabber.ImageMode
 import org.bytedeco.javacpp.opencv_core.CV_8U
-import org.bytedeco.javacpp.avutil
 
-private class FFmpegSource(pathToVideo: String) extends GraphStage[SourceShape[Frame]] {
+private class FFmpegSource(pathToVideo: String)(implicit mat: Materializer) extends GraphStage[SourceShape[Frame]] {
   val output = Outlet[Frame]("FFmpegSpurce")
   override def shape: SourceShape[Frame] = SourceShape(output)
 

@@ -6,7 +6,7 @@ import java.nio.ByteBuffer
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.Source
-import akka.stream.{Graph, SourceShape}
+import akka.stream.{Graph, Materializer, SourceShape}
 import org.bytedeco.javacpp.opencv_imgcodecs.imread
 import org.bytedeco.javacpp.opencv_core.Mat
 import org.bytedeco.javacpp.opencv_imgproc.{COLOR_BGR2RGB, cvtColor}
@@ -33,8 +33,8 @@ final class DetectorController private (private val _detectorModel: DetectorMode
     Source.fromGraph(sourceGraph)
   }
 
-  def sourceVideo(pathToVideo: String)(implicit system: ActorSystem): Source[Frame, NotUsed] = {
-    val sourceGraph: Graph[SourceShape[Frame], NotUsed] = new FFmpegSource(pathToVideo)
+  def sourceVideo(pathToVideo: String)(implicit mat: Materializer): Source[Frame, NotUsed] = {
+    val sourceGraph: Graph[SourceShape[Frame], NotUsed] = new FFmpegSource(pathToVideo)(mat)
     Source.fromGraph(sourceGraph)
   }
 
