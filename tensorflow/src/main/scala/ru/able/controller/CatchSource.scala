@@ -3,10 +3,10 @@ package ru.able.controller
 import akka.stream.stage.{GraphStage, GraphStageLogic, OutHandler}
 import akka.stream.{Attributes, Materializer, Outlet, SourceShape}
 import org.bytedeco.javacv.{FFmpegFrameGrabber, Frame}
-import ru.able.utils.settings.Settings
+import ru.able.utils.settings.{PropertyBasedSettings}
 
-private class CatchSource[T <: Settings](sourceSettings: T, sourceType: String)
-                                        (implicit mat: Materializer) extends GraphStage[SourceShape[Frame]] {
+private class CatchSource[T <: PropertyBasedSettings](sourceSettings: T, sourceType: String)
+                                                     (implicit mat: Materializer) extends GraphStage[SourceShape[Frame]] {
   val output = Outlet[Frame]("CatchedSource")
   override def shape: SourceShape[Frame] = SourceShape(output)
 

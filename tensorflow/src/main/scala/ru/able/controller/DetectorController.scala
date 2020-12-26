@@ -14,7 +14,7 @@ import org.bytedeco.javacpp.opencv_imgproc.{COLOR_BGR2RGB, cvtColor}
 import org.bytedeco.javacv.Frame
 import org.platanios.tensorflow.api.{Shape, UINT8}
 import org.platanios.tensorflow.api.Tensor
-import ru.able.utils.settings.{CameraBasedSettings, CameraSettings, VideoBasedSettings, VideoSettings}
+import ru.able.utils.settings.PropertyBasedSettings
 
 final class DetectorController private (private val _detectorModel: DetectorModel)
 {
@@ -34,8 +34,8 @@ final class DetectorController private (private val _detectorModel: DetectorMode
 
   def sourceCamera(cameraIdx: Option[String])(implicit system: ActorSystem): Source[Frame, NotUsed] = {
     val sourceGraph: Graph[SourceShape[Frame], NotUsed] =
-      new CatchSource[CameraSettings](
-        new CameraBasedSettings(_config.getConfig("cameraConfig")),
+      new CatchSource[PropertyBasedSettings](
+        new PropertyBasedSettings(_config.getConfig("cameraConfig")),
         cameraIdx.getOrElse(_config.getString("cameraSource"))
       )
     Source.fromGraph(sourceGraph)
@@ -43,8 +43,8 @@ final class DetectorController private (private val _detectorModel: DetectorMode
 
   def sourceVideo(pathToVideo: Option[String])(implicit mat: Materializer): Source[Frame, NotUsed] = {
     val sourceGraph: Graph[SourceShape[Frame], NotUsed] =
-      new CatchSource[VideoSettings](
-        new VideoBasedSettings(_config.getConfig("videoConfig")),
+      new CatchSource[PropertyBasedSettings](
+        new PropertyBasedSettings(_config.getConfig("videoConfig")),
         pathToVideo.getOrElse(_config.getString("videoSource"))
       )(mat)
     Source.fromGraph(sourceGraph)

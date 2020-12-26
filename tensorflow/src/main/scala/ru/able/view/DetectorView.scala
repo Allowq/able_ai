@@ -55,11 +55,11 @@ final class DetectorView (val controller: DetectorController) {
     videoSource.run()
   }
 
-  def detectFromCamera(cameraIdx: Option[String]): Unit = {
+  def detectFromCamera(cameraDeviceIdx: Option[String]): Unit = {
     val canvasFrame = new CanvasFrame("Able AI Catcher")
     canvasFrame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE) // exit when the canvas frame is closed
 
-    val cameraSource = controller.sourceCamera(cameraIdx)
+    val cameraSource = controller.sourceCamera(cameraDeviceIdx)
       .mapAsync(1)(MediaConversion.toAsyncMat)
       .mapAsync(1)(MediaConversion.asyncHorizontal)
       .map(img => {
