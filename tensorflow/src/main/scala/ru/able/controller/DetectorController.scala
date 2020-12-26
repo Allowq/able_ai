@@ -7,15 +7,19 @@ import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.Source
 import akka.stream.{Graph, Materializer, SourceShape}
+import com.typesafe.config.ConfigFactory
 import org.bytedeco.javacpp.opencv_imgcodecs.imread
 import org.bytedeco.javacpp.opencv_core.Mat
 import org.bytedeco.javacpp.opencv_imgproc.{COLOR_BGR2RGB, cvtColor}
 import org.bytedeco.javacv.Frame
 import org.platanios.tensorflow.api.{Shape, UINT8}
 import org.platanios.tensorflow.api.Tensor
+import ru.able.utils.settings.{CameraBasedSettings, CameraSettings, VideoBasedSettings, VideoSettings}
 
 final class DetectorController private (private val _detectorModel: DetectorModel)
 {
+  private lazy val _config = ConfigFactory.defaultApplication().resolve().getConfig("sourceDescription")
+
   def this(folderPath: Option[String] = None) {
     this(
       new DetectorViaFileDescription(folderPath).defineDetector()
@@ -28,13 +32,21 @@ final class DetectorController private (private val _detectorModel: DetectorMode
 
   def getLabel(index: Int): String = _detectorModel.getLabelByIndex(index)
 
-  def sourceCamera(cameraDeviceIdx: Int)(implicit system: ActorSystem): Source[Frame, NotUsed] = {
-    val sourceGraph: Graph[SourceShape[Frame], NotUsed] = new CameraSource(cameraDeviceIdx)
+  def sourceCamera(cameraIdx: Option[String])(implicit system: ActorSystem): Source[Frame, NotUsed] = {
+    val sourceGraph: Graph[SourceShape[Frame], NotUsed] =
+      new CatchSource[CameraSettings](
+        new CameraBasedSettings(_config.getConfig("cameraConfig")),
+        cameraIdx.getOrElse(_config.getString("cameraSource"))
+      )
     Source.fromGraph(sourceGraph)
   }
 
-  def sourceVideo(pathToVideo: String)(implicit mat: Materializer): Source[Frame, NotUsed] = {
-    val sourceGraph: Graph[SourceShape[Frame], NotUsed] = new FFmpegSource(pathToVideo)(mat)
+  def sourceVideo(pathToVideo: Option[String])(implicit mat: Materializer): Source[Frame, NotUsed] = {
+    val sourceGraph: Graph[SourceShape[Frame], NotUsed] =
+      new CatchSource[VideoSettings](
+        new VideoBasedSettings(_config.getConfig("videoConfig")),
+        pathToVideo.getOrElse(_config.getString("videoSource"))
+      )(mat)
     Source.fromGraph(sourceGraph)
   }
 

@@ -40,26 +40,26 @@ final class DetectorView (val controller: DetectorController) {
     canvasFrame.dispose()
   }
 
-  def detectOnVideo(pathToVideo: String): Unit = {
+  def detectOnVideo(pathToVideo: Option[String]): Unit = {
     val canvasFrame = new CanvasFrame("Able AI Catcher")
     canvasFrame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE) // exit when the canvas frame is closed
     val videoSource = controller.sourceVideo(pathToVideo)(materializer)
-        .mapAsync(1)(MediaConversion.toAsyncMat)
-        .mapAsync(1)(MediaConversion.asyncHorizontal)
-        .map(img => {
-          drawBoundingBoxes(img, controller.detectOnImage(img))
-        })
-        .mapAsync(1)(MediaConversion.toAsyncFrame)
-        .map(canvasFrame.showImage)
-        .to(Sink.ignore)
+      .mapAsync(1)(MediaConversion.toAsyncMat)
+      .mapAsync(1)(MediaConversion.asyncHorizontal)
+      .map(img => {
+        drawBoundingBoxes(img, controller.detectOnImage(img))
+      })
+      .mapAsync(1)(MediaConversion.toAsyncFrame)
+      .map(canvasFrame.showImage)
+      .to(Sink.ignore)
     videoSource.run()
   }
 
-  def detectFromCamera(cameraDeviceIdx: Int): Unit = {
+  def detectFromCamera(cameraIdx: Option[String]): Unit = {
     val canvasFrame = new CanvasFrame("Able AI Catcher")
     canvasFrame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE) // exit when the canvas frame is closed
 
-    val cameraSource = controller.sourceCamera(cameraDeviceIdx)
+    val cameraSource = controller.sourceCamera(cameraIdx)
       .mapAsync(1)(MediaConversion.toAsyncMat)
       .mapAsync(1)(MediaConversion.asyncHorizontal)
       .map(img => {

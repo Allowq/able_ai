@@ -22,8 +22,6 @@ object Main {
       sys.exit(2)
     }
 
-    if (args.length < 2) printUsageAndExit()
-
     val detectorController: DetectorController = new DetectorController(args.lift(2))
     val detector: DetectorView = new DetectorView(detectorController)
 
@@ -32,9 +30,9 @@ object Main {
       case "image" =>
         detector.detectOnImage(args(1))
       case "video" =>
-        detector.detectOnVideo(args(1))
+        detector.detectOnVideo(args.lift(1))
       case "camera" =>
-        detector.detectFromCamera(Integer.parseInt(args(1)))
+        detector.detectFromCamera(args.lift(1))
       case _ => printUsageAndExit()
     }
   }
