@@ -3,7 +3,7 @@ package ru.able.controller
 import akka.stream.stage.{GraphStage, GraphStageLogic, OutHandler}
 import akka.stream.{Attributes, Materializer, Outlet, SourceShape}
 import org.bytedeco.javacv.{FFmpegFrameGrabber, Frame}
-import ru.able.utils.settings.{PropertyBasedSettings}
+import ru.able.utils.settings.PropertyBasedSettings
 
 private class CatchSource[T <: PropertyBasedSettings](sourceSettings: T, sourceType: String)
                                                      (implicit mat: Materializer) extends GraphStage[SourceShape[Frame]] {
