@@ -12,7 +12,6 @@ object Notifier {
   def props(settings: Settings, communication: Communication)(implicit actorSystem: ActorSystem): Props = {
     Props(new Notifier(communication))
   }
-
 }
 
 class Notifier(communication: Communication) extends Actor with ActorLogging {

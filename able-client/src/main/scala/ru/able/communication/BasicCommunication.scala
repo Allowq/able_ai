@@ -23,7 +23,7 @@ import scala.util.Try
 class SocketFrameConverter() {
 
   def convert(cf: CameraFrame): SocketFrame =
-    SocketFrame(toBytes(MediaConversion.toFrame(cf.imgMat), ".jpg"), cf.date)
+    SocketFrame(toBytes(MediaConversion.toIplImage(cf.imgMat), ".jpg"), cf.date)
 
   private def asJpeg(image: IplImage, quality: Int = 80): Array[Byte] = {
     val matrix =
@@ -43,8 +43,8 @@ class SocketFrameConverter() {
   //    frame_length.length
   //  }
 
-  def toBytes(frame: Frame, format: String): Array[Byte] = {
-    val m           = cvEncodeImage(format, MediaConversion.toIplImage(frame).asCvMat)
+  def toBytes(image: IplImage, format: String): Array[Byte] = {
+    val m           = cvEncodeImage(format, image.asCvMat)
     val bytePointer = m.data_ptr
     val imageData   = new Array[Byte](m.size)
     bytePointer.get(imageData, 0, m.size)

@@ -10,8 +10,8 @@ class ObjectInputStreamWithCustomClassLoader(InputStream: InputStream)
       Class.forName(desc.getName, false, getClass.getClassLoader)
     } catch {
       case _: ClassNotFoundException => super.resolveClass(
-        ObjectStreamClass.lookup(Class.forName(desc.getName()
-          .replace("sentinel.communication.", "ru.able.communication.")))
+//        ObjectStreamClass.lookup(Class.forName(desc.getName().replace("ru.able.communication.", "ru.able.server.camera.")))
+        ObjectStreamClass.lookup(Class.forName("ru.able.server.camera." + desc.getName.split('.').last))
       )
     }
   }

@@ -24,8 +24,6 @@ class StreamerPlugin(notifier: ActorRef)(implicit mat: Materializer) extends Plu
 
   var pluginKillSwitch: Option[SharedKillSwitch] = None
 
-  import org.bytedeco.javacv.OpenCVFrameConverter
-
   override def start(ps: AdvancedPluginStart): Unit =
     Try({
 

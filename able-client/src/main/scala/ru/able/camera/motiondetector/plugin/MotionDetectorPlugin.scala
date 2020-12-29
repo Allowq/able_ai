@@ -33,7 +33,7 @@ class MotionDetectorPlugin(canvas: CanvasFrame,
     val structuringElement = getStructuringElement(MORPH_RECT, structuringElementSize)
     val frameAsMat         = backgroundSubstractedFrame.originalFrame.imgMat
     morphologyEx(frameAsMat, frameAsMat, MORPH_OPEN, structuringElement)
-    frameAsMat.release()
+//    frameAsMat.release()
     backgroundSubstractedFrame
   }
 
