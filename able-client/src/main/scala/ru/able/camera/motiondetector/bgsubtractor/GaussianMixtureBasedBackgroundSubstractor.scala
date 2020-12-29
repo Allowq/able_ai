@@ -3,10 +3,10 @@ package ru.able.camera.motiondetector.bgsubtractor
 import com.typesafe.scalalogging.LazyLogging
 import org.bytedeco.javacpp.opencv_core._
 import org.bytedeco.javacpp.opencv_video.BackgroundSubtractorMOG2
-import org.bytedeco.javacv.OpenCVFrameConverter
-
+import org.bytedeco.javacv.{Frame, OpenCVFrameConverter}
 import ru.able.camera.camera.CameraFrame
 import ru.able.camera.camera.MotionDetectFrame
+import ru.able.camera.utils.MediaConversion
 
 @deprecated
 object GaussianMixtureBasedBackgroundSubstractor {
@@ -26,20 +26,14 @@ class GaussianMixtureBasedBackgroundSubstractor(backgroundSubtractorMOG2: Backgr
 {
   private val mask: Mat = new Mat()
 
-  private def applyMask(source: IplImage): IplImage = {
-//    val nnn          = org.bytedeco.javacpp.opencv_core.cvCloneImage(source)
-//    val currentFrame = new Mat(nnn)
-    val currentFrame = new Mat(source)
-    backgroundSubtractorMOG2.apply(currentFrame, mask, learningRate)
-    val converter   = new OpenCVFrameConverter.ToIplImage()
-    val maskedImage = converter.convert(converter.convert(mask))
-//    val maskedImage = new IplImage(mask)
-    currentFrame.release()
+  private def applyMask(source: Mat): IplImage = {
+    backgroundSubtractorMOG2.apply(source, mask, learningRate)
+    val maskedImage = MediaConversion.toIplImage(mask)
     maskedImage
   }
 
-  override def substractBackground(frame: CameraFrame): MotionDetectFrame =
-    MotionDetectFrame(masked = applyMask(frame.image), originalFrame = frame)
+  override def substractBackground(cf: CameraFrame): MotionDetectFrame =
+    MotionDetectFrame(applyMask(cf.imgMat), cf)
 
   override def close(): Unit = {
     backgroundSubtractorMOG2.close()

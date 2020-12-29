@@ -7,15 +7,13 @@ import ru.able.camera.motiondetector.bgsubtractor.BackgroundSubstractor
 import ru.able.camera.camera.{CameraFrame, MotionDetectFrame}
 
 class BackgroundSubstractorStage(backgroundSubstractor: BackgroundSubstractor)
-    extends GraphStage[FlowShape[CameraFrame, MotionDetectFrame]]
-    with LazyLogging {
-
+  extends GraphStage[FlowShape[CameraFrame, MotionDetectFrame]] with LazyLogging
+{
   private val in  = Inlet[CameraFrame]("MotionDetect.in")
   private val out = Outlet[MotionDetectFrame]("MotionDetect.out")
 
-  override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
-    new GraphStageLogic(shape) {
-
+  override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape)
+  {
       private def substractBackground(frame: CameraFrame) = backgroundSubstractor.substractBackground(frame)
 
       setHandler(in, new InHandler {

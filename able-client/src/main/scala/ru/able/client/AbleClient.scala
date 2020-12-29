@@ -22,7 +22,7 @@ object AbleClient extends App with LazyLogging {
 
   System.setProperty("org.bytedeco.javacpp.maxphysicalbytes", "0")
   System.setProperty("org.bytedeco.javacpp.maxbytes", "0")
-  System.setProperty("org.bytedeco.javacpp.logger.debug", "true")
+//  System.setProperty("org.bytedeco.javacpp.logger.debug", "true")
 
   logger.info(s"AbleClient start up ...")
 
@@ -41,15 +41,13 @@ object AbleClient extends App with LazyLogging {
     materializer.shutdown()
   }
 
-  val iplConverter = () => new OpenCVFrameConverter.ToIplImage()
-  val matConverter = () => new OpenCVFrameConverter.ToMat()
   val canvas = createCanvas(shutdown)
 
   sleep(6000) // nice :(
 
   val streamerPlugin = new StreamerPlugin(notifier)(materializer)
-  val showImagePlugin = new ShowImage(canvas, iplConverter(), "normal")(materializer)
-  val motionDetect = new MotionDetectorPlugin(null, iplConverter(), matConverter(), backgroundSubstractor, "motion", notifier)(materializer)
+  val showImagePlugin = new ShowImage(canvas,"normal")(materializer)
+  val motionDetect = new MotionDetectorPlugin(null, backgroundSubstractor, "motion", notifier)(materializer)
 
   orchestator.addPlugin(streamerPlugin)
   orchestator.addPlugin(showImagePlugin)

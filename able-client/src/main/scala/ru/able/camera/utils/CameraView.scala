@@ -6,8 +6,7 @@ import javax.swing.JFrame.EXIT_ON_CLOSE
 import akka.actor.{Actor, ActorLogging, ActorSystem}
 import akka.stream.{Materializer, SharedKillSwitch}
 import com.typesafe.scalalogging.LazyLogging
-import org.bytedeco.javacv.{CanvasFrame, OpenCVFrameConverter}
-import org.bytedeco.javacv.OpenCVFrameConverter.ToIplImage
+import org.bytedeco.javacv.CanvasFrame
 import ru.able.app.Orchestator
 import ru.able.camera.camera.stage.ShowImageStage
 import ru.able.plugin.util.ShowImage
@@ -42,7 +41,6 @@ object CameraView extends App with LazyLogging {
     materializer.shutdown()
   }
 
-  val converter = () => new OpenCVFrameConverter.ToIplImage()
   val canvas    = createCanvas(shutdown)
   val canvas2   = createCanvas(shutdown)
   val canvas3   = createCanvas(shutdown)
@@ -54,12 +52,12 @@ object CameraView extends App with LazyLogging {
 
   sleep(4000)
 
-  val showImagePlugin  = new ShowImage(canvas, converter())(materializer)
-  val showImagePlugin2 = new ShowImage(canvas2, converter())(materializer)
-  val showImagePlugin3 = new ShowImage(canvas3, converter())(materializer)
-  val showImagePlugin4 = new ShowImage(canvas4, converter())(materializer)
-  val showImagePlugin5 = new ShowImage(canvas5, converter())(materializer)
-  val showImagePlugin6 = new ShowImage(canvas6, converter())(materializer)
+  val showImagePlugin  = new ShowImage(canvas)(materializer)
+  val showImagePlugin2 = new ShowImage(canvas2)(materializer)
+  val showImagePlugin3 = new ShowImage(canvas3)(materializer)
+  val showImagePlugin4 = new ShowImage(canvas4)(materializer)
+  val showImagePlugin5 = new ShowImage(canvas5)(materializer)
+  val showImagePlugin6 = new ShowImage(canvas6)(materializer)
 
   buncher.addPlugin(showImagePlugin)
   buncher.addPlugin(showImagePlugin2)
@@ -101,7 +99,7 @@ object CameraView extends App with LazyLogging {
     }, ms millisecond)
   }
   @deprecated
-  class ShowImageActor(canvas: CanvasFrame, converter: ToIplImage) extends Actor with ActorLogging with LazyLogging {
+  class ShowImageActor(canvas: CanvasFrame) extends Actor with ActorLogging with LazyLogging {
     override def receive: Receive = {
       case PluginStart(killSwitch, broadcast) =>
         val requestor = sender()
@@ -110,7 +108,7 @@ object CameraView extends App with LazyLogging {
           val publisher = broadcast.graph.run()
           publisher
             .via(killSwitch.asInstanceOf[SharedKillSwitch].flow)
-            .runWith(new ShowImageStage(canvas, converter))
+            .runWith(new ShowImageStage(canvas))
 
         }) recover {
           case e: Exception => requestor ! Error(e.getMessage)

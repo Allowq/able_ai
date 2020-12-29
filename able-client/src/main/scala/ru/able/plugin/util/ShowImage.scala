@@ -5,8 +5,7 @@ import com.typesafe.scalalogging.LazyLogging
 import org.bytedeco.javacpp.opencv_core
 import org.bytedeco.javacpp.opencv_core.{FONT_HERSHEY_PLAIN, Mat}
 import org.bytedeco.javacpp.opencv_imgproc.putText
-import org.bytedeco.javacv.{CanvasFrame, OpenCVFrameConverter}
-import org.bytedeco.javacv.OpenCVFrameConverter.ToIplImage
+import org.bytedeco.javacv.CanvasFrame
 import ru.able.camera.camera.CameraFrame
 import ru.able.camera.camera.stage.ShowImageStage
 import ru.able.camera.utils.MediaConversion
@@ -15,12 +14,9 @@ import ru.able.router.messages.AdvancedPluginStart
 
 import scala.util.Try
 
-class ShowImage(canvas: CanvasFrame, converter: ToIplImage, name: String = "")
+class ShowImage(canvas: CanvasFrame, name: String = "")
                (implicit mat: Materializer) extends Plugin with LazyLogging
 {
-  val converterToMat = new OpenCVFrameConverter.ToMat()
-  val converterToIpl = new OpenCVFrameConverter.ToIplImage()
-
   var pluginKillSwitch: Option[SharedKillSwitch] = None
 
   override def start(ps: AdvancedPluginStart): Unit =
@@ -41,18 +37,17 @@ class ShowImage(canvas: CanvasFrame, converter: ToIplImage, name: String = "")
         .via(pluginKillSwitch.get.flow)
         .async
         .map(f => {
-          val frame: Mat = converterToMat.convert(converterToMat.convert(f.image))
           val box_text   = "Streamer ====================================="
           val point      = new opencv_core.Point(50, i)
           i=i+1
           val scalar     = new opencv_core.Scalar(0, 255, 0, 2.0)
           val font       = FONT_HERSHEY_PLAIN
-          putText(frame, box_text, point, font, 1.0, scalar)
+          putText(f.imgMat, box_text, point, font, 1.0, scalar)
 
-          CameraFrame(converterToIpl.convert(converterToIpl.convert(frame)), f.date)
+          CameraFrame(f.imgMat, f.date)
         })
         .async
-        .runWith(new ShowImageStage(canvas, converter, name))
+        .runWith(new ShowImageStage(canvas, name))
 
     }) recover {
       case e: Exception => logger.error(e.getMessage, e)

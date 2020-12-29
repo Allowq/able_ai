@@ -1,6 +1,6 @@
 package ru.able.communication
 
-import java.io.{ObjectOutputStream}
+import java.io.ObjectOutputStream
 import java.net.InetAddress
 import java.net.Socket
 import java.net.ConnectException
@@ -14,14 +14,16 @@ import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.javacpp.opencv_imgcodecs
 import org.bytedeco.javacpp.opencv_imgcodecs.CV_IMWRITE_JPEG_QUALITY
 import org.bytedeco.javacpp.opencv_imgcodecs.cvEncodeImage
+import org.bytedeco.javacv.Frame
 import ru.able.camera.camera.CameraFrame
+import ru.able.camera.utils.MediaConversion
 
 import scala.util.Try
 
 class SocketFrameConverter() {
 
-  def convert(frame: CameraFrame): SocketFrame =
-    SocketFrame(toBytes(frame.image, ".jpg"), frame.date)
+  def convert(cf: CameraFrame): SocketFrame =
+    SocketFrame(toBytes(MediaConversion.toFrame(cf.imgMat), ".jpg"), cf.date)
 
   private def asJpeg(image: IplImage, quality: Int = 80): Array[Byte] = {
     val matrix =
@@ -41,8 +43,8 @@ class SocketFrameConverter() {
   //    frame_length.length
   //  }
 
-  def toBytes(image: IplImage, format: String): Array[Byte] = {
-    val m           = cvEncodeImage(format, image.asCvMat)
+  def toBytes(frame: Frame, format: String): Array[Byte] = {
+    val m           = cvEncodeImage(format, MediaConversion.toIplImage(frame).asCvMat)
     val bytePointer = m.data_ptr
     val imageData   = new Array[Byte](m.size)
     bytePointer.get(imageData, 0, m.size)

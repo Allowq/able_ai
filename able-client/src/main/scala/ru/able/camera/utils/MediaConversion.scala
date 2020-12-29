@@ -19,6 +19,10 @@ object MediaConversion {
     def get(): OpenCVFrameConverter.ToMat = new OpenCVFrameConverter.ToMat
   })
 
+  private val frameToIplConverter = ThreadLocal.withInitial(new Supplier[OpenCVFrameConverter.ToIplImage] {
+    override def get(): OpenCVFrameConverter.ToIplImage = new OpenCVFrameConverter.ToIplImage
+  })
+
   /**
    * Returns an OpenCV Mat for a given JavaCV frame
    */
@@ -32,6 +36,21 @@ object MediaConversion {
   def toFrame(mat: Mat): Frame = frameToMatConverter.get().convert(mat)
   def toAsyncFrame(mat: Mat)(implicit system: ActorSystem): Future[Frame] =
     Future { frameToMatConverter.get().convert(mat) }
+
+  def toIplImage(frame: Frame): IplImage = frameToIplConverter.get().convert(frame)
+  def toAsyncIplImage(frame: Frame)(implicit system: ActorSystem): Future[IplImage] =
+    Future { frameToIplConverter.get().convert(frame) }
+
+  def toIplImage(mat: Mat): IplImage ={
+    val t = frameToIplConverter.get()
+    t.convert(t.convert(mat))
+  }
+
+  def toAsyncIplImage(mat: Mat)(implicit system: ActorSystem): Future[IplImage] =
+    Future {
+      val t = frameToIplConverter.get()
+      t.convert(t.convert(mat))
+    }
 
   /**
    * Clones the image and returns a flipped version of the given image matrix along the y axis (horizontally)

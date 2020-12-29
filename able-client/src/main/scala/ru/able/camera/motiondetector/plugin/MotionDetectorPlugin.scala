@@ -7,8 +7,6 @@ import akka.stream.{KillSwitches, Materializer, SharedKillSwitch}
 import com.typesafe.scalalogging.LazyLogging
 import org.bytedeco.javacpp.opencv_core._
 import org.bytedeco.javacpp.opencv_imgproc._
-import org.bytedeco.javacv.OpenCVFrameConverter.ToIplImage
-import org.bytedeco.javacv.OpenCVFrameConverter.ToMat
 import org.bytedeco.javacv._
 import ru.able.camera.camera.CameraFrame
 import ru.able.camera.camera.MotionDetectFrame
@@ -16,18 +14,15 @@ import ru.able.camera.motiondetector.bgsubtractor.BackgroundSubstractor
 import ru.able.camera.motiondetector.stage.BackgroundSubstractorStage
 import ru.able.plugin.Plugin
 import ru.able.router.messages.AdvancedPluginStart
+import ru.able.camera.utils.MediaConversion
 
 import scala.util.Try
 
 class MotionDetectorPlugin(canvas: CanvasFrame,
-                           iplImageConverter: ToIplImage,
-                           matConverter: ToMat,
                            backgroundSubstractor: BackgroundSubstractor,
                            name: String = "",
-                           notifier: ActorRef)(implicit mat: Materializer)
-    extends Plugin
-    with LazyLogging {
-
+                           notifier: ActorRef)(implicit mat: Materializer) extends Plugin with LazyLogging
+{
   val structuringElementSize                     = new Size(4, 4)
   var pluginKillSwitch: Option[SharedKillSwitch] = None
 
@@ -36,17 +31,14 @@ class MotionDetectorPlugin(canvas: CanvasFrame,
     */
   private def erosionAndDilation(backgroundSubstractedFrame: MotionDetectFrame) = {
     val structuringElement = getStructuringElement(MORPH_RECT, structuringElementSize)
-    val frameAsMat         = toMat(backgroundSubstractedFrame.originalFrame.image)
+    val frameAsMat         = backgroundSubstractedFrame.originalFrame.imgMat
     morphologyEx(frameAsMat, frameAsMat, MORPH_OPEN, structuringElement)
     frameAsMat.release()
     backgroundSubstractedFrame
   }
 
-  private def toMat(image: IplImage) = matConverter.convert(iplImageConverter.convert(image))
-
   override def start(ps: AdvancedPluginStart): Unit =
     Try({
-
       pluginKillSwitch = Some(KillSwitches.shared("BackgroundSubstractor"))
       val (broadcast, killSwitch) = (ps.broadcast, ps.ks.sharedKillSwitch)
 
@@ -66,7 +58,8 @@ class MotionDetectorPlugin(canvas: CanvasFrame,
 
   private def sendNotification(f: CameraFrame) = notifier ! f
 
-  private def reachedThreshold(f: MotionDetectFrame): Boolean = cvCountNonZero(f.masked) > 5000
+  private def reachedThreshold(f: MotionDetectFrame): Boolean =
+    cvCountNonZero(f.maskedImg) > 5000
 
   override def stop(): Unit = pluginKillSwitch match {
     case Some(ks) => ks.shutdown()

@@ -10,11 +10,11 @@ import akka.stream.scaladsl.GraphDSL
 import akka.stream.scaladsl.Source
 import com.typesafe.scalalogging.LazyLogging
 import org.bytedeco.javacv.Frame
-import org.bytedeco.javacv.OpenCVFrameConverter
 import ru.TickSource
 import ru.able.camera.camera.CameraFrame
 import ru.able.camera.camera.graph.CameraReaderGraph.CameraSource
 import ru.able.camera.camera.graph.CameraReaderGraph.RawCameraSource
+import ru.able.camera.utils.MediaConversion
 import ru.able.graph.GraphFactory
 
 object CameraReaderGraph {
@@ -31,20 +31,15 @@ object CameraReaderGraph {
   */
 class CameraReaderGraph(rawCameraSource: RawCameraSource,
                         tickingSource: TickSource,
-                        killSwitch: SharedKillSwitch)
-    extends GraphFactory[CameraSource]
-    with LazyLogging {
-
-  override def createGraph(): CameraSource =
-    Source.fromGraph(GraphDSL.create() { implicit builder =>
+                        killSwitch: SharedKillSwitch) extends GraphFactory[CameraSource] with LazyLogging
+{
+  override def createGraph(): CameraSource = Source.fromGraph(GraphDSL.create() {
+    implicit builder => {
       import GraphDSL.Implicits._
-      // todo make it dependency
-      val converter = new OpenCVFrameConverter.ToIplImage()
-
       val IplImageConverter: FlowShape[Frame, CameraFrame] = builder.add(
         Flow[Frame]
           .via(killSwitch.flow)
-          .map(converter.convert)
+          .map(MediaConversion.toMat)
           .map(CameraFrame(_)))
 
       val Camera: Outlet[Frame] = builder.add(rawCameraSource).out
@@ -57,5 +52,6 @@ class CameraReaderGraph(rawCameraSource: RawCameraSource,
       val stream = cameraStream ~> IplImageConverter
 
       SourceShape(stream.outlet)
-    })
+    }
+  })
 }

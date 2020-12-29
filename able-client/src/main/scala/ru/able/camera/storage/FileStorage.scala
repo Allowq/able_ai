@@ -2,7 +2,7 @@ package ru.able.camera.storage
 
 import akka.actor.Actor
 import ru.able.camera.storage.Storage._
-import ru.able.camera.utils.CVUtils
+import ru.able.camera.utils.{CVUtils, MediaConversion}
 import ru.able.camera.camera.CameraFrame
 
 class FileStorage(cvUtils: CVUtils,
@@ -14,6 +14,6 @@ class FileStorage(cvUtils: CVUtils,
     case Save(frame) => save(frame)
   }
 
-  override def save(frame: CameraFrame): Unit =
-    cvUtils.saveImage(s"$filePath/${frame.formattedDate(timestamp)}", frame.image)
+  override def save(cf: CameraFrame): Unit =
+    cvUtils.saveImage(s"$filePath/${cf.formattedDate(timestamp)}", MediaConversion.toFrame(cf.imgMat))
 }

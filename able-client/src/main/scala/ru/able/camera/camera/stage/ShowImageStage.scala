@@ -8,20 +8,19 @@ import akka.stream.stage.GraphStageLogic
 import akka.stream.stage.InHandler
 import com.typesafe.scalalogging.LazyLogging
 import org.bytedeco.javacv.CanvasFrame
-import org.bytedeco.javacv.OpenCVFrameConverter.ToIplImage
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Try
-
 import ru.able.camera.camera.CameraFrame
+import ru.able.camera.utils.MediaConversion
 
 /**
   * Sink to display Frames on canvas
   *
   * @param canvas    a JFrame that displays the given frame
-  * @param converter converts frame to CanvasFrame
   */
-class ShowImageStage(canvas: CanvasFrame, converter: ToIplImage, name: String = "")
+class ShowImageStage(canvas: CanvasFrame, name: String = "")
   extends GraphStage[SinkShape[CameraFrame]] with LazyLogging
 {
   private val in  = Inlet[CameraFrame]("ShowImage.in")
@@ -42,7 +41,7 @@ class ShowImageStage(canvas: CanvasFrame, converter: ToIplImage, name: String = 
       Future {
           Try {
             println(s"$name ${elem.date}")
-            canvas.showImage(converter.convert(elem.image))
+            canvas.showImage(MediaConversion.toFrame(elem.imgMat))
           } recover {
             case e: Throwable => logger.error(e.getMessage, e)
           }

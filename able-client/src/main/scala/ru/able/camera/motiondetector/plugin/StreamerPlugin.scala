@@ -16,6 +16,7 @@ import scala.concurrent.duration.DurationInt
 import scala.concurrent.forkjoin.ForkJoinPool
 import scala.util.Try
 import org.bytedeco.javacpp.opencv_imgproc.putText
+import ru.able.camera.utils.MediaConversion
 
 class StreamerPlugin(notifier: ActorRef)(implicit mat: Materializer) extends Plugin with LazyLogging {
 
@@ -24,9 +25,6 @@ class StreamerPlugin(notifier: ActorRef)(implicit mat: Materializer) extends Plu
   var pluginKillSwitch: Option[SharedKillSwitch] = None
 
   import org.bytedeco.javacv.OpenCVFrameConverter
-
-  val converterToMat = new OpenCVFrameConverter.ToMat()
-  val converterToIpl = new OpenCVFrameConverter.ToIplImage()
 
   override def start(ps: AdvancedPluginStart): Unit =
     Try({
@@ -51,14 +49,13 @@ class StreamerPlugin(notifier: ActorRef)(implicit mat: Materializer) extends Plu
         //        .buffer(30, OverflowStrategy.dropNew)
         .map(f => {
           println(" new frame " + f.date)
-          val frame: Mat = converterToMat.convert(converterToMat.convert(f.image))
           val box_text   = f.date.toString
           val point      = new opencv_core.Point(50, 20)
           val scalar     = new opencv_core.Scalar(0, 255, 0, 2.0)
           val font       = FONT_HERSHEY_PLAIN
-          putText(frame, box_text, point, font, 1.0, scalar)
+          putText(f.imgMat, box_text, point, font, 1.0, scalar)
 
-          CameraFrame(converterToIpl.convert(converterToIpl.convert(frame)), f.date)
+          CameraFrame(f.imgMat, f.date)
         })
 //        .map(f => Seq(f))
         .groupedWithin(5, 1000 millis)
