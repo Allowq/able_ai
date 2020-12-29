@@ -1,0 +1,6 @@
+package sentinel.app.communication;
+
+message AlertMessage{
+    required int64 timestamp = 1;
+    required bytes image = 2;
+}

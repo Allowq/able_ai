@@ -3,6 +3,7 @@
 =======
 # Common
 /data
+/logs
 /dl4j/target/*
 /protobuf/*
 /tensorflow/target/*

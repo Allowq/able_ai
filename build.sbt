@@ -5,7 +5,7 @@
 lazy val root =
   project
     .in(file("."))
-    .settings(settings)
+    .settings(commonSettings)
     .settings(
       crossPaths := false,
       autoScalaLibrary := false,
@@ -14,27 +14,27 @@ lazy val root =
     )
     .aggregate(tensorFlow)
 
-lazy val dl4j =
-  project
-    .in(file("dl4j"))
-    .settings(settings)
-    .settings(
-      name := "dl4j",
-      scalaVersion := "2.11.12", // ScalNet and ND4S are only available for Scala 2.11
-      libraryDependencies ++= Seq(
-        library.dl4j,
-        library.dl4jCuda,
-        library.dl4jUi,
-        library.logbackClassic,
-        library.nd4jNativePlatform,
-        library.scalNet
-      )
-    )
+//lazy val dl4j =
+//  project
+//    .in(file("dl4j"))
+//    .settings(settings)
+//    .settings(
+//      name := "dl4j",
+//      scalaVersion := "2.11.12", // ScalNet and ND4S are only available for Scala 2.11
+//      libraryDependencies ++= Seq(
+//        library.dl4j,
+//        library.dl4jCuda,
+//        library.dl4jUi,
+//        library.logbackClassic,
+//        library.nd4jNativePlatform,
+//        library.scalNet
+//      )
+//    )
 
 lazy val tensorFlow =
   project
     .in(file("tensorflow"))
-    .settings(settings)
+    .settings(commonSettings)
     .settings(
       name := "tensorflow",
       PB.targets in Compile := Seq(
@@ -55,15 +55,73 @@ lazy val tensorFlow =
       ),
       mainClass in (Compile, run) := Some("ru.able.Main"),
       mainClass in assembly := Some("ru.able.Main"),
-      resourceDirectory in Compile := file(".") / ".src/main/resources",
-      resourceDirectory in Runtime := file(".") / ".src/main/resources",
+      resourceDirectory in Compile := file(".") / "./tensorflow/src/main/resources",
+      resourceDirectory in Runtime := file(".") / "./tensorflow/src/main/resources",
       fork := true, // prevent classloader issues caused by sbt and opencv
       assemblySettings
     )
 
-// The MXNet example has been moved into its own sbt project for now because we have to build mxnet manually,
-// and we don't want to break dependency resolution for the other projects.
-// lazy val mxnet = project
+lazy val AblePlatform =
+  project
+    .in(file("able-platform"))
+    .settings(commonSettings)
+    .settings(
+      name := "able-platform",
+      javaCppPresetLibs ++= Seq(
+        "ffmpeg" -> "3.4.1"
+      ),
+      libraryDependencies ++= Seq(
+        library.loggingScala,
+        library.logbackClassic,
+        library.akkaScala,
+        library.janino
+      ),
+      mainClass in (Compile, run) := Some("ru.able.server.AbleServer"),
+      mainClass in assembly := Some("ru.able.server.AbleServer"),
+      resourceDirectory in Compile := file(".") / "./able-platform/src/main/resources",
+      resourceDirectory in Runtime := file(".") / "./able-platform/src/main/resources",
+      fork := true, // prevent classloader issues caused by sbt and opencv
+      assemblySettings
+    )
+
+lazy val AbleClient =
+  project
+    .in(file("able-client"))
+    .settings(commonSettings)
+    .settings(
+      name := "able-client",
+      javaCppPresetLibs ++= Seq(
+        "ffmpeg" -> "3.4.1"
+      ),
+      libraryDependencies ++= Seq(
+        library.loggingScala,
+        library.logbackClassic,
+        library.akkaScala,
+        library.janino,
+        library.googleInject
+      ),
+      mainClass in (Compile, run) := Some("ru.able.client.AbleClient"),
+      mainClass in assembly := Some("ru.able.client.AbleClient"),
+      resourceDirectory in Compile := file(".") / "./able-client/src/main/resources",
+      resourceDirectory in Runtime := file(".") / "./able-client/src/main/resources",
+      fork := true, // prevent classloader issues caused by sbt and opencv
+      assemblySettings
+    )
+
+
+lazy val SharedLibrary =
+  project
+    .in(file("shared-library"))
+    .settings(lazySettings)
+    .settings(
+      javaCppPresetLibs ++= Seq(
+        "ffmpeg" -> "3.4.1"
+      ),
+      libraryDependencies ++= Seq(
+        library.akkaScala,
+        library.javacvScala
+      )
+    )
 
 // *****************************************************************************
 // Library dependencies
@@ -79,9 +137,12 @@ lazy val library =
       val scalaCheck =      "1.13.5"
       val scalaTest  =      "3.0.4"
       val tensorFlow =      "0.2.4"
-      val protobufVersion = "0.7.4"
-      val akkaVersion =     "2.6.10"
+      val protobufScala =   "0.7.4"
+      val akkaScala =       "2.6.10"
       val confScala =       "1.4.0"
+      val loggingScala =    "3.9.0"
+      val javacvScala =     "1.4"
+      val guiceScala =      "4.1.0"
     }
     val betterFiles =         "com.github.pathikrit"  %% "better-files"           % Version.betterFiles
     val dl4j =                "org.deeplearning4j"    % "deeplearning4j-core"     % Version.dl4j
@@ -95,9 +156,12 @@ lazy val library =
     val scalNet =             "org.deeplearning4j"    %% "scalnet"                % Version.dl4j
     val tensorFlow =          "org.platanios"         %% "tensorflow"             % Version.tensorFlow classifier tensorflow_classifier
     val tensorFlowData =      "org.platanios"         %% "tensorflow-data"        % Version.tensorFlow
-    val protobufScala =       "com.thesamet.scalapb"  %% "scalapb-runtime"        % Version.protobufVersion % "protobuf"
-    val akkaScala =           "com.typesafe.akka"     %% "akka-stream"            % Version.akkaVersion
+    val protobufScala =       "com.thesamet.scalapb"  %% "scalapb-runtime"        % Version.protobufScala % "protobuf"
+    val akkaScala =           "com.typesafe.akka"     %% "akka-stream"            % Version.akkaScala
     val confScala =           "com.typesafe"          % "config"                  % Version.confScala
+    val loggingScala =        "com.typesafe.scala-logging" %% "scala-logging"     % Version.loggingScala
+    val javacvScala =         "org.bytedeco"          % "javacv-platform"         % Version.javacvScala
+    val googleInject =        "com.google.inject"     % "guice"                   % Version.guiceScala
   }
 
 // *****************************************************************************
@@ -139,7 +203,11 @@ lazy val assemblySettings = Seq(
 // Common settings
 // *****************************************************************************
 
-lazy val settings = commonSettings
+lazy val lazySettings = Seq(
+  organization := "ru.able",
+  version := "0.1.0-SNAPSHOT",
+  scalaVersion := "2.12.6"
+)
 
 lazy val commonSettings = Seq(
   name := "able-ai-platform",
@@ -149,6 +217,7 @@ lazy val commonSettings = Seq(
   licenses += ("GNU Lesser GPL 3.0", url("https://www.gnu.org/licenses/lgpl-3.0.html")),
   startYear := Some(2020),
 
+  logLevel := Level.Debug,
   scalaVersion := "2.12.6",
   scalacOptions ++= Seq(
     "-unchecked",
