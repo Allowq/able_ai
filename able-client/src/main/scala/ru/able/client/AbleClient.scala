@@ -45,11 +45,11 @@ object AbleClient extends App with LazyLogging {
 
 //  sleep(6000) // nice :(
 
-  val streamerPlugin = new StreamerPlugin(notifier)(materializer)
+//  val streamerPlugin = new StreamerPlugin(notifier)(materializer)
   val showImagePlugin = new ShowImage(canvas,"normal")(materializer)
   val motionDetect = new MotionDetectorPlugin(null, backgroundSubstractor, "motion", notifier)(materializer)
 
-//  orchestator.addPlugin(streamerPlugin)
+  orchestator.addPlugin(streamerPlugin)
   orchestator.addPlugin(showImagePlugin)
   orchestator.addPlugin(motionDetect)
 
