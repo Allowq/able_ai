@@ -49,13 +49,11 @@ object AbleServer extends App with LazyLogging {
     val in           = new ObjectInputStreamWithCustomClassLoader(serverSocket.getInputStream())
 
     try {
-      //      val next = in.readObject().asInstanceOf[Seq[SocketFrame]]
-      //      frameAddedLabel.setText(s"Added ${next.size} frames.")
-      //      next.map(toCanvasFrameSpecial).foreach(f => frames.put(f))
-
-      val next = in.readObject().asInstanceOf[SocketFrame]
-      frameAddedLabel.setText(s"Added 1 frame.")
-      frames.put(new CanvasFrameSpecial(next))
+      val next = in.readObject().asInstanceOf[Seq[SocketFrame]]
+      frameAddedLabel.setText(s"Added ${next.size} frames.")
+      next.foreach(
+        f => frames.put(new CanvasFrameSpecial(f))
+      )
     } catch {
       case e: Exception => logger.error(e.getMessage, e)
     } finally {

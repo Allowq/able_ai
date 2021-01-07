@@ -7,11 +7,11 @@ import com.google.inject.Inject
 import ru.able.camera.camera.graph.CameraReaderGraph.CameraSource
 import ru.able.camera.camera.reader.BroadCastRunnableGraph
 
-class SourceBroadCastFactory @Inject()(implicit materializer: Materializer) {
-
+class SourceBroadCastFactory @Inject()(implicit materializer: Materializer)
+{
   def create(source: CameraSource): BroadCastRunnableGraph = {
-   println("creation of the beast")
     BroadCastRunnableGraph(
-      source.toMat(BroadcastHub.sink(bufferSize = 1))(Keep.right))
+      source.toMat(BroadcastHub.sink(bufferSize = 1))(Keep.right)
+    )
   }
 }

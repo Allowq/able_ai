@@ -16,25 +16,26 @@ object Notifier {
 
 class Notifier(communication: Communication) extends Actor with ActorLogging {
 
-  private val pool = java.util.concurrent.Executors.newFixedThreadPool(2)
+  private val pool = java.util.concurrent.Executors.newFixedThreadPool(5)
 
   override def receive: Receive = {
-    case f: CameraFrame =>
+    case frame: CameraFrame =>
       pool.execute(
         () =>
-          communication.send(f) match {
+          communication.sendBatch(Seq(frame)) match {
             case Left(msg)  => log.warning(msg)
-            case Right(msg) => log.info(msg)
+            case Right(msg) => {
+              log.info(msg)
+            }
         }
       )
-//    case frames: Seq[CameraFrame] =>
-//      pool.execute(
-//        () =>
-//          communication.sendBatch(frames) match {
-//            case Left(msg)  => log.warning(msg)
-//            case Right(msg) => log.info(msg)
-//          }
-//      )
-
+    case frames: Seq[CameraFrame] =>
+      pool.execute(
+        () =>
+          communication.sendBatch(frames) match {
+            case Left(msg)  => log.warning(msg)
+            case Right(msg) => log.info(msg)
+          }
+      )
   }
 }

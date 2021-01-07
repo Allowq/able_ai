@@ -10,9 +10,6 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="sbt: org.bytedeco:javacpp:1.4:jar" level="project" />
-    <orderEntry type="library" name="sbt: org.bytedeco:javacv:1.4:jar" level="project" />
-    <orderEntry type="library" name="sbt: org.bytedeco.javacpp-presets:opencv:3.4.0-1.4:jar" level="project" />
-    <orderEntry type="library" name="sbt: org.bytedeco.javacpp-presets:opencv:3.4.0-1.4:macosx-x86_64:jar" level="project" />
     <orderEntry type="module-library">
       <library name="sbt: unmanaged-sources-and-docs">
         <CLASSES />
@@ -24,5 +21,8 @@
         </SOURCES>
       </library>
     </orderEntry>
+    <orderEntry type="library" name="sbt: org.bytedeco.javacpp-presets:opencv:3.4.0-1.4:macosx-x86_64:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.bytedeco.javacpp-presets:opencv:3.4.0-1.4:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.bytedeco:javacv:1.4:jar" level="project" />
   </component>
 </module>

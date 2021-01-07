@@ -3,7 +3,6 @@ package ru.able.camera.motiondetector.bgsubtractor
 import com.typesafe.scalalogging.LazyLogging
 import org.bytedeco.javacpp.opencv_core._
 import org.bytedeco.javacpp.opencv_video.BackgroundSubtractorMOG2
-import org.bytedeco.javacv.{Frame, OpenCVFrameConverter}
 import ru.able.camera.camera.CameraFrame
 import ru.able.camera.camera.MotionDetectFrame
 import ru.able.camera.utils.MediaConversion

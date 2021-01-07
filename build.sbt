@@ -98,7 +98,11 @@ lazy val AbleClient =
         library.logbackClassic,
         library.akkaScala,
         library.janino,
-        library.googleInject
+        library.googleInject,
+        library.akkaTest,
+        library.scalaTest,
+        library.mockitoScala,
+        library.akkaStreamTest
       ),
       mainClass in (Compile, run) := Some("ru.able.client.AbleClient"),
       mainClass in assembly := Some("ru.able.client.AbleClient"),
@@ -136,13 +140,15 @@ lazy val library =
       val logbackClassic =  "1.2.3"
       val scalaCheck =      "1.13.5"
       val scalaTest  =      "3.0.4"
+      val akkaTest =        "2.6.10"
+      val akkaScala =       "2.6.10"
       val tensorFlow =      "0.2.4"
       val protobufScala =   "0.7.4"
-      val akkaScala =       "2.6.10"
       val confScala =       "1.4.0"
       val loggingScala =    "3.9.0"
       val javacvScala =     "1.4"
       val guiceScala =      "4.1.0"
+      val mockitoScala =    "1.10.19"
     }
     val betterFiles =         "com.github.pathikrit"  %% "better-files"           % Version.betterFiles
     val dl4j =                "org.deeplearning4j"    % "deeplearning4j-core"     % Version.dl4j
@@ -153,6 +159,8 @@ lazy val library =
     val dl4jCuda =            "org.deeplearning4j"    % "deeplearning4j-cuda-9.0" % Version.dl4j
     val scalaCheck =          "org.scalacheck"        %% "scalacheck"             % Version.scalaCheck
     val scalaTest  =          "org.scalatest"         %% "scalatest"              % Version.scalaTest
+    val akkaTest =            "com.typesafe.akka"     %% "akka-testkit"           % Version.akkaTest
+    val akkaStreamTest =      "com.typesafe.akka"     %% "akka-stream-testkit"    % Version.akkaTest
     val scalNet =             "org.deeplearning4j"    %% "scalnet"                % Version.dl4j
     val tensorFlow =          "org.platanios"         %% "tensorflow"             % Version.tensorFlow classifier tensorflow_classifier
     val tensorFlowData =      "org.platanios"         %% "tensorflow-data"        % Version.tensorFlow
@@ -162,6 +170,7 @@ lazy val library =
     val loggingScala =        "com.typesafe.scala-logging" %% "scala-logging"     % Version.loggingScala
     val javacvScala =         "org.bytedeco"          % "javacv-platform"         % Version.javacvScala
     val googleInject =        "com.google.inject"     % "guice"                   % Version.guiceScala
+    val mockitoScala =        "org.mockito"           % "mockito-all"             % Version.mockitoScala
   }
 
 // *****************************************************************************

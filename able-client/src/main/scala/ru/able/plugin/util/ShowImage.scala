@@ -21,13 +21,9 @@ class ShowImage(canvas: CanvasFrame, name: String = "")
 
   override def start(ps: AdvancedPluginStart): Unit =
     Try({
-
       pluginKillSwitch = Some(KillSwitches.shared("ShowImage"))
-
       logger.info("Starting image view")
-
       val (broadcast, killSwitch) = (ps.broadcast, ps.ks.sharedKillSwitch)
-
       logger.info(broadcast.toString)
 
       var i = 0
@@ -48,7 +44,6 @@ class ShowImage(canvas: CanvasFrame, name: String = "")
         })
         .async
         .runWith(new ShowImageStage(canvas, name))
-
     }) recover {
       case e: Exception => logger.error(e.getMessage, e)
     }

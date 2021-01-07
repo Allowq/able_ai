@@ -40,7 +40,7 @@ class ShowImageStage(canvas: CanvasFrame, name: String = "")
     private def showImage(elem: CameraFrame) =
       Future {
           Try {
-            println(s"$name ${elem.date}")
+            logger.debug(s"$name ${elem.date}")
             canvas.showImage(MediaConversion.toFrame(elem.imgMat))
           } recover {
             case e: Throwable => logger.error(e.getMessage, e)

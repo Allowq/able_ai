@@ -20,9 +20,11 @@ object CameraFSM {
 
   val Name = classOf[CameraFSM].getName
 
-  def props(cameraSource: ActorRef, router: ActorRef, settings: Settings)(implicit ec: ExecutionContext,
-                                                                          system: ActorSystem) =
+  def props(cameraSource: ActorRef, router: ActorRef, settings: Settings)
+           (implicit ec: ExecutionContext, system: ActorSystem) =
+  {
     Props(new CameraFSM(cameraSource, router, settings))
+  }
 }
 
 /**

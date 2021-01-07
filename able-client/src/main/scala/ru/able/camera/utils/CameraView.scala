@@ -7,15 +7,15 @@ import akka.actor.{Actor, ActorLogging, ActorSystem}
 import akka.stream.{Materializer, SharedKillSwitch}
 import com.typesafe.scalalogging.LazyLogging
 import org.bytedeco.javacv.CanvasFrame
-import ru.able.app.Orchestator
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration._
+import scala.util.Try
+
+import ru.able.app.Orchestrator
 import ru.able.camera.camera.stage.ShowImageStage
 import ru.able.plugin.util.ShowImage
 import ru.able.router.messages.{Error, PluginStart}
 import ru.able.system.module.ModuleInjector
-
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration._
-import scala.util.Try
 
 object CameraView extends App with LazyLogging {
 
@@ -23,17 +23,10 @@ object CameraView extends App with LazyLogging {
 
   private implicit val system = ActorSystem()
   private implicit val materializer =  Materializer.createMaterializer(system)
-
-  private val materializer1 = Materializer.createMaterializer(system)
-
-  private val materializer2 = Materializer.createMaterializer(system)
-
-  private val materializer3 = Materializer.createMaterializer(system)
-
   private implicit val executionContext =
     materializer.system.dispatchers.defaultGlobalDispatcher
   private val modules = new ModuleInjector(system, materializer)
-  private val buncher = modules.injector.getInstance(classOf[Orchestator])
+  private val buncher = modules.injector.getInstance(classOf[Orchestrator])
 
   lazy val shutdown: Unit = {
     logger.info(s"Sentinel camera view shutdown.")
@@ -68,13 +61,13 @@ object CameraView extends App with LazyLogging {
 
   sys.addShutdownHook(shutdown)
 
-  private def startStreaming(buncher: Orchestator) = {
+  private def startStreaming(buncher: Orchestrator) = {
     val start = buncher.start()
 
     logger.info("Video streaming started.")
   }
 
-  private def stopStreaming(buncher: Orchestator) = {
+  private def stopStreaming(buncher: Orchestrator) = {
     logger.info("Shutdown video stream ...")
     val stop = buncher.stop()
 

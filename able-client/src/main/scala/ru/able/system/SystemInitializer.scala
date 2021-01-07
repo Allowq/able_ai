@@ -3,12 +3,13 @@ package ru.able.system
 import akka.actor.Actor
 import akka.actor.ActorRef
 import akka.actor.Props
+import akka.pattern.pipe
 import akka.util.Timeout
 import com.google.inject.Inject
-import scala.concurrent.ExecutionContext
+
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Failure
 import scala.util.Success
-
 import ru.able.camera.camera.reader.BroadCastRunnableGraph
 import ru.able.camera.camera.reader.BroadcastMaterializer
 import ru.able.camera.utils.settings.Settings
@@ -34,12 +35,13 @@ class SystemInitializer @Inject()(broadCastMaterializer: BroadcastMaterializer,
 
   override def receive: Receive = {
     case Start(gks) =>
+      val senderActor = sender()
       broadCastMaterializer.create(gks).future.onComplete {
         case Success(bs: BroadCastRunnableGraph) =>
           pluginRegistry ! AdvancedPluginStart(gks, bs)
-          sender ! Status(Right(Ok))
+          Future { Status(Right(Ok)) }.pipeTo(senderActor)
         case Failure(t) =>
-          sender ! Status(Left(t))
+          Future { Status(Left(t)) }.pipeTo(senderActor)
       }
   }
 }

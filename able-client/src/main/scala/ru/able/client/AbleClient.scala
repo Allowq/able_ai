@@ -9,7 +9,7 @@ import com.google.inject.name.Names
 import com.typesafe.scalalogging.LazyLogging
 import javax.swing.JFrame.EXIT_ON_CLOSE
 import org.bytedeco.javacv.{CanvasFrame, OpenCVFrameConverter}
-import ru.able.app.Orchestator
+import ru.able.app.Orchestrator
 import ru.able.camera.motiondetector.bgsubtractor.GaussianMixtureBasedBackgroundSubstractor
 import ru.able.camera.motiondetector.plugin.{MotionDetectorPlugin, StreamerPlugin}
 import ru.able.plugin.util.ShowImage
@@ -28,10 +28,10 @@ object AbleClient extends App with LazyLogging {
 
   private implicit val actorSystem  = ActorSystem()
   private implicit val materializer = Materializer.createMaterializer(actorSystem)
-
   private implicit val executionContext = materializer.system.dispatchers.defaultGlobalDispatcher
+
   private val modules               = new ModuleInjector(actorSystem, materializer)
-  private val orchestator           = modules.injector.getInstance(classOf[Orchestator])
+  private val orchestator           = modules.injector.getInstance(classOf[Orchestrator])
   private val backgroundSubstractor = modules.injector.getInstance(classOf[GaussianMixtureBasedBackgroundSubstractor])
   private val notifier: ActorRef    = modules.injector.getInstance(Key.get(classOf[ActorRef], Names.named("Notifier")))
 
@@ -43,13 +43,13 @@ object AbleClient extends App with LazyLogging {
 
   val canvas = createCanvas(shutdown)
 
-  sleep(6000) // nice :(
+//  sleep(6000) // nice :(
 
   val streamerPlugin = new StreamerPlugin(notifier)(materializer)
   val showImagePlugin = new ShowImage(canvas,"normal")(materializer)
   val motionDetect = new MotionDetectorPlugin(null, backgroundSubstractor, "motion", notifier)(materializer)
 
-  orchestator.addPlugin(streamerPlugin)
+//  orchestator.addPlugin(streamerPlugin)
   orchestator.addPlugin(showImagePlugin)
   orchestator.addPlugin(motionDetect)
 
@@ -57,14 +57,14 @@ object AbleClient extends App with LazyLogging {
 
   sys.addShutdownHook(shutdown)
 
-  private def startStreaming(buncher: Orchestator) = {
-    val start = buncher.start()
+  private def startStreaming(buncher: Orchestrator) = {
+    buncher.start()
     logger.info("Video streaming started.")
   }
 
-  private def stopStreaming(buncher: Orchestator) = {
+  private def stopStreaming(buncher: Orchestrator) = {
     logger.info("Shutdown video stream ...")
-    val stop = buncher.stop()
+    buncher.stop()
     logger.info("Video streaming stopped.")
   }
 

@@ -30,10 +30,9 @@ object BroadcastMaterializer {
 class BroadcastMaterializer @Inject()(@Named("CameraReaderFactory") cameraReaderFactory: CameraReaderGraphFactory,
                                       broadcastFactory: SourceBroadCastFactory,
                                       settings: Settings)
-                                     (implicit val materializer: Materializer) extends LazyLogging{
-
-  private implicit val executionContext =
-    materializer.system.dispatchers.defaultGlobalDispatcher
+                                     (implicit val materializer: Materializer) extends LazyLogging
+{
+  private implicit val executionContext = materializer.system.dispatchers.defaultGlobalDispatcher
 
   def create(gks: GlobalKillSwitch): Promise[BroadCastRunnableGraph] = {
     val reader    = cameraReaderFactory.create(gks)
@@ -45,17 +44,18 @@ class BroadcastMaterializer @Inject()(@Named("CameraReaderFactory") cameraReader
   }
 
   private def materalize(broadcast: BroadCastRunnableGraph, promise: Promise[BroadCastRunnableGraph]) =
-//    awaitBroadcastStartUp(broadcast, promise)
-//    promise success broadcast
     Try(awaitBroadcastStartUp(broadcast, promise)) recover {
       case e: TimeoutException => promise failure e
       case e: Exception        => promise failure e
     }
 
-  private def awaitBroadcastStartUp(broadcast: BroadCastRunnableGraph, promise: Promise[BroadCastRunnableGraph]) = {
-    val broadcastStream = broadcast.mat.take(1).runWith(Sink.foreach(f =>{
-      println(f)
-    }))
+  private def awaitBroadcastStartUp(broadcast: BroadCastRunnableGraph, promise: Promise[BroadCastRunnableGraph]) =
+  {
+    val broadcastStream = broadcast.mat.take(1).runWith(
+      Sink.foreach(
+        f => logger.info(s"Grab frame with sample description: $f")
+      )
+    )
 
     broadcastStream.onComplete {
       case Success(Done) => promise success broadcast

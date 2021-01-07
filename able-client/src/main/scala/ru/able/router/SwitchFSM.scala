@@ -2,19 +2,19 @@ package ru.able.router
 
 import akka.actor.{ActorRef, FSM, Props}
 import akka.util.Timeout
+import scala.concurrent.ExecutionContext
+
 import ru.able.camera.utils.settings.Settings
 import ru.able.router.messages.Messages._
 import ru.able.router.messages._
-
-import scala.concurrent.ExecutionContext
 
 object SwitchFSM {
 
   val Name = classOf[SwitchFSM].getName
 
-  def props(systemInitializer: ActorRef, settings: Settings)(implicit ec: ExecutionContext) =
+  def props(systemInitializer: ActorRef, settings: Settings)(implicit ec: ExecutionContext) = {
     Props(new SwitchFSM(systemInitializer, settings))
-
+  }
 }
 
 /**
@@ -23,13 +23,14 @@ object SwitchFSM {
   * delegate state changes to a router
   */
 class SwitchFSM(systemInitializer: ActorRef, settings: Settings)(implicit val ec: ExecutionContext)
-    extends FSM[State, Request] {
-
+  extends FSM[State, Request]
+{
   private val duration         = settings.getDuration("system.options.startUpTimeout")
   private implicit val timeout = Timeout(duration)
 
   startWith(Idle, Stop)
 
+  // TODO: upgrade to use scheduleRouterTimeoutCheck
   when(Waiting) {
     case Event(Status(Right(Ok)), _) =>
       goto(Active)

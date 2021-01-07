@@ -16,11 +16,11 @@ import ru.able.camera.camera.reader.KillSwitches.GlobalKillSwitch
   * @param tickingSource akka-stream tick source
   */
 class CameraReaderGraphFactory @Inject()(cameraSource: Source[Frame, NotUsed],
-                                         tickingSource: Source[Int, Cancellable]) extends LazyLogging {
-
+                                         tickingSource: Source[Int, Cancellable]) extends LazyLogging
+{
   /**
     * Creates a new CameraSource instance
-    * @param killSwitch A SharedKillswitch to stop the source and as well as the whole stream
+    * @param gks A SharedKillswitch to stop the source and as well as the whole stream
     * @return a new CameraSource instance
     */
   def create(gks: GlobalKillSwitch): CameraSource = {
@@ -28,5 +28,4 @@ class CameraReaderGraphFactory @Inject()(cameraSource: Source[Frame, NotUsed],
     // TODO wrap killswitch into a domain object and drop asINstanceof
     new CameraReaderGraph(cameraSource, tickingSource, gks.sharedKillSwitch).createGraph()
   }
-
 }

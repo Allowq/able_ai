@@ -15,5 +15,5 @@ case class BroadCastRunnableGraph(graph: RunnableGraph[CameraSource])(implicit v
 
   @throws[TimeoutException]
   def toFuture(): Future[Done] =
-    mat.runWith(Sink.ignore)
+    graph.run().runWith(Sink.ignore)
 }

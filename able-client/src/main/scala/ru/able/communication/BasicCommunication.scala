@@ -14,7 +14,6 @@ import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.javacpp.opencv_imgcodecs
 import org.bytedeco.javacpp.opencv_imgcodecs.CV_IMWRITE_JPEG_QUALITY
 import org.bytedeco.javacpp.opencv_imgcodecs.cvEncodeImage
-import org.bytedeco.javacv.Frame
 import ru.able.camera.camera.CameraFrame
 import ru.able.camera.utils.MediaConversion
 
@@ -87,7 +86,7 @@ class BasicCommunication extends Communication with LazyLogging with SocketSuppo
 
   val converter = new SocketFrameConverter()
 
-  override def send(frame: CameraFrame): Either[String, String] =
+  override def send(frame: CameraFrame): Either[String, String] = {
     Try {
       withSocket(socket => sendViaSocket(socket, converter.convert(frame)))
       Right("success")
@@ -99,13 +98,6 @@ class BasicCommunication extends Communication with LazyLogging with SocketSuppo
         Left(e.getMessage)
       }
     } get
-
-  private def sendViaSocket(socket: Socket, msg: AnyRef) = {
-    val out = new ObjectOutputStream(socket.getOutputStream())
-    out.writeObject(msg)
-    out.writeBytes("\n")
-    out.flush()
-    out.close()
   }
 
   override def sendBatch(msg: Seq[CameraFrame]): Either[String, String] = {
@@ -114,10 +106,19 @@ class BasicCommunication extends Communication with LazyLogging with SocketSuppo
       withSocket(socket => sendViaSocket(socket, data))
       Right("success")
     } recover {
+      case _: ConnectException => Right("success")
       case e: Exception => {
         logger.warn(e.getMessage, e)
         Left(e.getMessage)
       }
     } get
+  }
+
+  private def sendViaSocket(socket: Socket, msg: AnyRef) = {
+    val out = new ObjectOutputStream(socket.getOutputStream())
+    out.writeObject(msg)
+    out.writeBytes("\n")
+    out.flush()
+    out.close()
   }
 }

@@ -36,21 +36,21 @@ class CameraReaderGraph(rawCameraSource: RawCameraSource,
   override def createGraph(): CameraSource = Source.fromGraph(GraphDSL.create() {
     implicit builder => {
       import GraphDSL.Implicits._
+
+      val cameraStream = builder
+        .add(rawCameraSource)
+        .out
+        .via(killSwitch.flow)
+        .zip(tickingSource)
+        .map(_._1)
+
       val IplImageConverter: FlowShape[Frame, CameraFrame] = builder.add(
         Flow[Frame]
           .via(killSwitch.flow)
           .map(MediaConversion.toMat)
           .map(CameraFrame(_)))
 
-      val Camera: Outlet[Frame] = builder.add(rawCameraSource).out
-
-      val cameraStream = Camera
-        .via(killSwitch.flow)
-        .zip(tickingSource)
-        .map(_._1)
-
       val stream = cameraStream ~> IplImageConverter
-
       SourceShape(stream.outlet)
     }
   })

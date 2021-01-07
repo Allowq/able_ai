@@ -23,9 +23,8 @@ object CameraReaderGraphFactoryProvider {
 
 @Provides @Singleton
 class CameraReaderGraphFactoryProvider @Inject()(settings: Settings, frameGrabberBuilder: FrameGrabberBuilder)
-    extends Provider[CameraReaderGraphFactory]
-    with LazyLogging {
-
+  extends Provider[CameraReaderGraphFactory] with LazyLogging
+{
   override def get(): CameraReaderGraphFactory = new CameraReaderGraphFactory(createCameraSource, createTickingSource)
 
   private def createCameraSource = {
