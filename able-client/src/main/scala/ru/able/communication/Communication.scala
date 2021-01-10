@@ -6,5 +6,4 @@ trait Communication {
 
   def send(msg: CameraFrame): Either[String, String]
   def sendBatch(msg: Seq[CameraFrame]): Either[String, String]
-
 }

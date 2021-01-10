@@ -19,7 +19,7 @@ class SystemInitilaizerProvider @Inject()(settings: Settings,
 {
   override def get(): ActorRef =
     system.actorOf(
-      SystemInitializer.props(broadCastMaterializer, pluginRegistry,settings: Settings)(ec),
+      SystemInitializer.props(broadCastMaterializer, pluginRegistry, settings: Settings)(ec),
       SystemInitializer.Name
     )
 }

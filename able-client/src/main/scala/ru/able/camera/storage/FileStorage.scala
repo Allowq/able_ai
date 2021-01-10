@@ -7,9 +7,8 @@ import ru.able.camera.camera.CameraFrame
 
 class FileStorage(cvUtils: CVUtils,
                   filePath: String = ".",
-                  timestamp: String = "yyyy_MM_dd__HH_mm_ss.SS")
-  extends Actor with Storage {
-
+                  timestamp: String = "yyyy_MM_dd__HH_mm_ss.SS") extends Actor with Storage
+{
   override def receive: Receive = {
     case Save(frame) => save(frame)
   }

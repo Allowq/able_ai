@@ -15,7 +15,6 @@ import ru.able.camera.camera.CameraFrame
 import ru.able.camera.camera.graph.CameraReaderGraph.CameraSource
 import ru.able.camera.camera.graph.CameraReaderGraph.RawCameraSource
 import ru.able.camera.utils.MediaConversion
-import ru.able.graph.GraphFactory
 
 object CameraReaderGraph {
   type CameraSource    = Source[CameraFrame, NotUsed]
@@ -31,9 +30,9 @@ object CameraReaderGraph {
   */
 class CameraReaderGraph(rawCameraSource: RawCameraSource,
                         tickingSource: TickSource,
-                        killSwitch: SharedKillSwitch) extends GraphFactory[CameraSource] with LazyLogging
+                        killSwitch: SharedKillSwitch) extends LazyLogging
 {
-  override def createGraph(): CameraSource = Source.fromGraph(GraphDSL.create() {
+  def createGraph(): CameraSource = Source.fromGraph(GraphDSL.create() {
     implicit builder => {
       import GraphDSL.Implicits._
 

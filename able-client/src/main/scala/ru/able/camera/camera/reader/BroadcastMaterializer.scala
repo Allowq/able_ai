@@ -66,7 +66,5 @@ class BroadcastMaterializer @Inject()(@Named("CameraReaderFactory") cameraReader
         promise failure e
       }
     }
-
-//    Await.ready(broadcastStream, 2 seconds)
   }
 }

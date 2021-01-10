@@ -33,7 +33,7 @@ object AbleClient extends App with LazyLogging {
   private val modules               = new ModuleInjector(actorSystem, materializer)
   private val orchestator           = modules.injector.getInstance(classOf[Orchestrator])
   private val backgroundSubstractor = modules.injector.getInstance(classOf[GaussianMixtureBasedBackgroundSubstractor])
-  private val notifier: ActorRef    = modules.injector.getInstance(Key.get(classOf[ActorRef], Names.named("Notifier")))
+  private val notifier              = modules.injector.getInstance(Key.get(classOf[ActorRef], Names.named("Notifier")))
 
   lazy val shutdown: Unit = {
     logger.info(s"AbleClient shutdown.")
@@ -49,7 +49,7 @@ object AbleClient extends App with LazyLogging {
   val showImagePlugin = new ShowImage(canvas,"normal")(materializer)
   val motionDetect = new MotionDetectorPlugin(null, backgroundSubstractor, "motion", notifier)(materializer)
 
-  orchestator.addPlugin(streamerPlugin)
+//  orchestator.addPlugin(streamerPlugin)
   orchestator.addPlugin(showImagePlugin)
   orchestator.addPlugin(motionDetect)
 
@@ -57,14 +57,14 @@ object AbleClient extends App with LazyLogging {
 
   sys.addShutdownHook(shutdown)
 
-  private def startStreaming(buncher: Orchestrator) = {
-    buncher.start()
+  private def startStreaming(orchestrator: Orchestrator) = {
+    orchestrator.start()
     logger.info("Video streaming started.")
   }
 
-  private def stopStreaming(buncher: Orchestrator) = {
+  private def stopStreaming(orchestrator: Orchestrator) = {
     logger.info("Shutdown video stream ...")
-    buncher.stop()
+    orchestrator.stop()
     logger.info("Video streaming stopped.")
   }
 

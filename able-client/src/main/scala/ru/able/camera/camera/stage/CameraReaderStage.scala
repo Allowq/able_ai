@@ -7,10 +7,8 @@ import org.bytedeco.javacv.{Frame, FrameGrabber}
 
 import scala.util.Try
 
-class CameraReaderStage(grabber: FrameGrabber)
-    extends GraphStage[SourceShape[Frame]]
-    with LazyLogging {
-
+class CameraReaderStage(grabber: FrameGrabber) extends GraphStage[SourceShape[Frame]] with LazyLogging
+{
   val out = Outlet[Frame]("Camera.out")
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =

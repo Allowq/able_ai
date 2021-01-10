@@ -34,14 +34,6 @@ class SocketFrameConverter() {
     data
   }
 
-  //  @throws[Exception]
-  //  def getnextframe(frame: Array[Byte]): Int = {
-  //    val image = converterToIplImage.convert(grabber.grab)
-  //    val frame_length = toBytes(image, ".jpg")
-  //    System.arraycopy(frame_length, 0, frame, 0, frame_length.length)
-  //    frame_length.length
-  //  }
-
   def toBytes(image: IplImage, format: String): Array[Byte] = {
     val m           = cvEncodeImage(format, image.asCvMat)
     val bytePointer = m.data_ptr
@@ -53,18 +45,6 @@ class SocketFrameConverter() {
 
   def convert(socketFrame: SocketFrame): Mat = {
     val bytePointer = new BytePointer(socketFrame.data: _*)
-
-//    val file = new File(s"g:\\cucc\\${socketFrame.date.toString.replace(":", "_")}.jpg")
-//    import java.io.FileOutputStream
-//    try {
-//      val fos = new FileOutputStream(file)
-//      try {
-//        fos.write(socketFrame.data)
-//        fos.close()
-//        println(s"file saved to ${file.getAbsolutePath}")
-//      } finally if (fos != null) fos.close()
-//    }
-
     opencv_imgcodecs.imdecode(new Mat(bytePointer, false), opencv_imgcodecs.IMREAD_UNCHANGED)
   }
 }
@@ -91,7 +71,7 @@ class BasicCommunication extends Communication with LazyLogging with SocketSuppo
       withSocket(socket => sendViaSocket(socket, converter.convert(frame)))
       Right("success")
     } recover {
-      // TODO: Can cause errors which happen when socket is busy?
+      //TODO: Can cause errors which happen when socket is busy?
       case _: ConnectException => Right("success")
       case e: Exception => {
         logger.warn(e.getMessage, e)
@@ -106,6 +86,7 @@ class BasicCommunication extends Communication with LazyLogging with SocketSuppo
       withSocket(socket => sendViaSocket(socket, data))
       Right("success")
     } recover {
+      //TODO: Upgrade to check socket busy
       case _: ConnectException => Right("success")
       case e: Exception => {
         logger.warn(e.getMessage, e)

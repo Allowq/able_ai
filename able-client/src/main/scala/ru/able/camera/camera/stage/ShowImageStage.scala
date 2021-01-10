@@ -20,8 +20,7 @@ import ru.able.camera.utils.MediaConversion
   *
   * @param canvas    a JFrame that displays the given frame
   */
-class ShowImageStage(canvas: CanvasFrame, name: String = "")
-  extends GraphStage[SinkShape[CameraFrame]] with LazyLogging
+class ShowImageStage(canvas: CanvasFrame, name: String = "") extends GraphStage[SinkShape[CameraFrame]] with LazyLogging
 {
   private val in  = Inlet[CameraFrame]("ShowImage.in")
   implicit val ec = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(5))
@@ -39,12 +38,12 @@ class ShowImageStage(canvas: CanvasFrame, name: String = "")
 
     private def showImage(elem: CameraFrame) =
       Future {
-          Try {
-            logger.debug(s"$name ${elem.date}")
-            canvas.showImage(MediaConversion.toFrame(elem.imgMat))
-          } recover {
-            case e: Throwable => logger.error(e.getMessage, e)
-          }
+        Try {
+          logger.debug(s"$name ${elem.date}")
+          canvas.showImage(MediaConversion.toFrame(elem.imgMat))
+        } recover {
+          case e: Throwable => logger.error(e.getMessage, e)
+        }
       }
 
     override def preStart(): Unit = pull(in)

@@ -54,9 +54,7 @@ class StreamerPlugin(notifier: ActorRef)(implicit mat: Materializer) extends Plu
     notifier ! f
   }
 
-  private def sendNotification(f: CameraFrame) = {
-    notifier ! f
-  }
+  private def sendNotification(f: CameraFrame) = notifier ! f
 
   override def stop(): Unit = pluginKillSwitch match {
     case Some(ks) => ks.shutdown()

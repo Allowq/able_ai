@@ -6,10 +6,10 @@ import akka.actor.Props
 import akka.pattern.pipe
 import akka.util.Timeout
 import com.google.inject.Inject
-
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Failure
 import scala.util.Success
+
 import ru.able.camera.camera.reader.BroadCastRunnableGraph
 import ru.able.camera.camera.reader.BroadcastMaterializer
 import ru.able.camera.utils.settings.Settings

@@ -16,9 +16,5 @@ class CameraInjector extends AbstractModule {
 
     bind(classOf[FrameGrabberBuilder])
       .to(classOf[FFmpegFrameGrabberBuilder])
-
-    bind(classOf[ActorRef])
-      .annotatedWith(Names.named("CameraSource"))
-      .toProvider(classOf[CameraSourceProvider])
   }
 }

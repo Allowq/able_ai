@@ -8,7 +8,6 @@ import org.bytedeco.javacpp.opencv_imgproc.putText
 import org.bytedeco.javacv.CanvasFrame
 import ru.able.camera.camera.CameraFrame
 import ru.able.camera.camera.stage.ShowImageStage
-import ru.able.camera.utils.MediaConversion
 import ru.able.plugin.Plugin
 import ru.able.router.messages.AdvancedPluginStart
 
@@ -24,7 +23,6 @@ class ShowImage(canvas: CanvasFrame, name: String = "")
       pluginKillSwitch = Some(KillSwitches.shared("ShowImage"))
       logger.info("Starting image view")
       val (broadcast, killSwitch) = (ps.broadcast, ps.ks.sharedKillSwitch)
-      logger.info(broadcast.toString)
 
       var i = 0
 

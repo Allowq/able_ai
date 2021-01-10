@@ -14,7 +14,6 @@ import ru.able.camera.motiondetector.bgsubtractor.BackgroundSubstractor
 import ru.able.camera.motiondetector.stage.BackgroundSubstractorStage
 import ru.able.plugin.Plugin
 import ru.able.router.messages.AdvancedPluginStart
-import ru.able.camera.utils.MediaConversion
 
 import scala.util.Try
 
@@ -25,17 +24,6 @@ class MotionDetectorPlugin(canvas: CanvasFrame,
 {
   val structuringElementSize                     = new Size(4, 4)
   var pluginKillSwitch: Option[SharedKillSwitch] = None
-
-  /**
-    * @see https://docs.opencv.org/2.4.13.4/doc/tutorials/imgproc/erosion_dilatation/erosion_dilatation.html
-    */
-  private def erosionAndDilation(backgroundSubstractedFrame: MotionDetectFrame) = {
-    val structuringElement = getStructuringElement(MORPH_RECT, structuringElementSize)
-    val frameAsMat         = backgroundSubstractedFrame.originalFrame.imgMat
-    morphologyEx(frameAsMat, frameAsMat, MORPH_OPEN, structuringElement)
-//    frameAsMat.release()
-    backgroundSubstractedFrame
-  }
 
   override def start(ps: AdvancedPluginStart): Unit =
     Try({
@@ -56,10 +44,21 @@ class MotionDetectorPlugin(canvas: CanvasFrame,
       case e: Exception => logger.error(e.getMessage, e)
     }
 
-  private def sendNotification(f: CameraFrame) = notifier ! f
+  /**
+   * @see https://docs.opencv.org/2.4.13.4/doc/tutorials/imgproc/erosion_dilatation/erosion_dilatation.html
+   */
+  private def erosionAndDilation(backgroundSubstractedFrame: MotionDetectFrame) = {
+    val structuringElement = getStructuringElement(MORPH_RECT, structuringElementSize)
+    val frameAsMat         = backgroundSubstractedFrame.originalFrame.imgMat
+    morphologyEx(frameAsMat, frameAsMat, MORPH_OPEN, structuringElement)
+    //    frameAsMat.release()
+    backgroundSubstractedFrame
+  }
 
   private def reachedThreshold(f: MotionDetectFrame): Boolean =
     cvCountNonZero(f.maskedImg) > 5000
+
+  private def sendNotification(f: CameraFrame) = notifier ! f
 
   override def stop(): Unit = pluginKillSwitch match {
     case Some(ks) => ks.shutdown()

@@ -6,7 +6,7 @@ import scala.util.Try
 import ru.able.camera.utils.settings.Settings
 import ru.able.plugin.Plugin
 import ru.able.router.RouterFSM.{Add, Remove}
-import ru.able.router.messages.Messages.{Finished, Ok}
+import ru.able.router.messages.Messages.Finished
 import ru.able.router.messages._
 
 object RouterFSM {
