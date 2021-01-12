@@ -14,5 +14,8 @@ class FileStorage(cvUtils: CVUtils,
   }
 
   override def save(cf: CameraFrame): Unit =
-    cvUtils.saveImage(s"$filePath/${cf.formattedDate(timestamp)}", MediaConversion.toFrame(cf.imgMat))
+    cvUtils.saveImage(
+      s"$filePath/${cf.formattedDate(timestamp)}",
+      MediaConversion.toFrame(cf.imgMat)
+    )
 }

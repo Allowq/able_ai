@@ -23,7 +23,7 @@ import ru.able.camera.utils.MediaConversion
 class ShowImageStage(canvas: CanvasFrame, name: String = "") extends GraphStage[SinkShape[CameraFrame]] with LazyLogging
 {
   private val in  = Inlet[CameraFrame]("ShowImage.in")
-  implicit val ec = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(5))
+  implicit val ec = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(1))
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     setHandler(

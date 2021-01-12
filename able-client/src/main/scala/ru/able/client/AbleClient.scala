@@ -69,7 +69,7 @@ object AbleClient extends App with LazyLogging {
   }
 
   private def createCanvas(shutdown: => Unit): CanvasFrame = {
-    val canvas = new CanvasFrame("Able Client View Util")
+    val canvas = new CanvasFrame("Able Client")
     canvas.setDefaultCloseOperation(EXIT_ON_CLOSE)
     canvas.addWindowListener(new WindowAdapter() {
       override def windowClosing(windowEvent: java.awt.event.WindowEvent): Unit = {

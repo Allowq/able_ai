@@ -12,6 +12,7 @@ import ru.able.camera.camera.CameraFrame
 import ru.able.camera.camera.MotionDetectFrame
 import ru.able.camera.motiondetector.bgsubtractor.BackgroundSubstractor
 import ru.able.camera.motiondetector.stage.BackgroundSubstractorStage
+import ru.able.camera.utils.MediaConversion
 import ru.able.plugin.Plugin
 import ru.able.router.messages.AdvancedPluginStart
 
@@ -51,7 +52,8 @@ class MotionDetectorPlugin(canvas: CanvasFrame,
     val structuringElement = getStructuringElement(MORPH_RECT, structuringElementSize)
     val frameAsMat         = backgroundSubstractedFrame.originalFrame.imgMat
     morphologyEx(frameAsMat, frameAsMat, MORPH_OPEN, structuringElement)
-    //    frameAsMat.release()
+    //TODO Check release() policy
+//    frameAsMat.release()
     backgroundSubstractedFrame
   }
 

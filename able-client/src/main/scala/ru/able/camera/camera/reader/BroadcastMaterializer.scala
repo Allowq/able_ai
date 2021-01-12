@@ -10,14 +10,11 @@ import com.typesafe.scalalogging.LazyLogging
 import ru.able.camera.camera.graph.CameraReaderGraph
 import ru.able.camera.camera.graph.factory.CameraReaderGraphFactory
 import ru.able.camera.camera.graph.factory.SourceBroadCastFactory
-import ru.able.camera.camera.reader.BroadcastMaterializer.StreamClosedError
 import ru.able.camera.camera.reader.KillSwitches.GlobalKillSwitch
 import ru.able.camera.utils.settings.Settings
 
-import scala.concurrent.Await
 import scala.concurrent.Promise
 import scala.concurrent.TimeoutException
-import scala.concurrent.duration._
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try

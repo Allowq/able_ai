@@ -1,6 +1,5 @@
 package ru.able.camera.camera.module
 
-import akka.actor.ActorRef
 import com.google.inject.AbstractModule
 import com.google.inject.name.Names
 

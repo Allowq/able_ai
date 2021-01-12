@@ -1,9 +1,8 @@
 package ru.able.camera.framegrabber
 
 import javax.inject.Inject
-
 import com.typesafe.scalalogging.LazyLogging
-import org.bytedeco.javacv.{FFmpegFrameGrabber, FrameGrabber}
+import org.bytedeco.javacv.{FFmpegFrameGrabber, FrameGrabber, RealSenseFrameGrabber}
 import ru.able.camera.utils.settings.Settings
 
 sealed trait FrameGrabberBuilder {

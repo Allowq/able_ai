@@ -16,7 +16,7 @@ object Notifier {
 
 class Notifier(communication: Communication) extends Actor with ActorLogging {
 
-  private val pool = java.util.concurrent.Executors.newFixedThreadPool(5)
+  private val pool = java.util.concurrent.Executors.newFixedThreadPool(2)
 
   override def receive: Receive = {
     case frame: CameraFrame =>

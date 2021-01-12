@@ -16,6 +16,7 @@ import scala.concurrent.duration.DurationInt
 import scala.concurrent.forkjoin.ForkJoinPool
 import scala.util.Try
 import org.bytedeco.javacpp.opencv_imgproc.putText
+import ru.able.camera.utils.MediaConversion
 
 class StreamerPlugin(notifier: ActorRef)(implicit mat: Materializer) extends Plugin with LazyLogging {
 
@@ -33,17 +34,17 @@ class StreamerPlugin(notifier: ActorRef)(implicit mat: Materializer) extends Plu
         .map(f => {
           logger.debug(" new frame " + f.date)
 
+          val imgMat     = f.imgMat
           val box_text   = f.date.toString
           val point      = new opencv_core.Point(50, 20)
           val scalar     = new opencv_core.Scalar(0, 255, 0, 2.0)
           val font       = FONT_HERSHEY_PLAIN
-          putText(f.imgMat, box_text, point, font, 1.0, scalar)
+          putText(imgMat, box_text, point, font, 1.0, scalar)
 
-          CameraFrame(f.imgMat, f.date)
+          CameraFrame(imgMat, f.date)
         })
-//        .map(f => Seq(f))
         .groupedWithin(5, 1000 millis)
-//        .async
+        .async
         .runWith(Sink.foreach(sendNotificationBatch))
     }) recover {
       case e: Exception => logger.error(e.getMessage, e)

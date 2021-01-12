@@ -3,7 +3,7 @@ package ru.able.plugin.util
 import akka.stream.{KillSwitches, Materializer, SharedKillSwitch}
 import com.typesafe.scalalogging.LazyLogging
 import org.bytedeco.javacpp.opencv_core
-import org.bytedeco.javacpp.opencv_core.{FONT_HERSHEY_PLAIN, Mat}
+import org.bytedeco.javacpp.opencv_core.FONT_HERSHEY_PLAIN
 import org.bytedeco.javacpp.opencv_imgproc.putText
 import org.bytedeco.javacv.CanvasFrame
 import ru.able.camera.camera.CameraFrame
@@ -24,21 +24,18 @@ class ShowImage(canvas: CanvasFrame, name: String = "")
       logger.info("Starting image view")
       val (broadcast, killSwitch) = (ps.broadcast, ps.ks.sharedKillSwitch)
 
-      var i = 0
-
       broadcast.mat
         .via(killSwitch.flow)
         .via(pluginKillSwitch.get.flow)
-        .async
+//        .async
         .map(f => {
+          val imgMat     = f.imgMat
           val box_text   = "Streamer ====================================="
-          val point      = new opencv_core.Point(50, i)
-          i=i+1
+          val point      = new opencv_core.Point(50, 15)
           val scalar     = new opencv_core.Scalar(0, 255, 0, 2.0)
           val font       = FONT_HERSHEY_PLAIN
-          putText(f.imgMat, box_text, point, font, 1.0, scalar)
-
-          CameraFrame(f.imgMat, f.date)
+          putText(imgMat, box_text, point, font, 1.0, scalar)
+          CameraFrame(imgMat, f.date)
         })
         .async
         .runWith(new ShowImageStage(canvas, name))

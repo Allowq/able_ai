@@ -9,14 +9,10 @@ import org.bytedeco.javacv.Frame
 import ru.able.camera.camera.graph.CameraReaderGraph
 import ru.able.camera.camera.graph.CameraReaderGraph.CameraSource
 import ru.able.camera.camera.reader.KillSwitches.GlobalKillSwitch
+import ru.able.camera.utils.settings.Settings
 
-/**
-  * Class for creating CameraSource instances
-  * @param cameraSource akka-stream source
-  * @param tickingSource akka-stream tick source
-  */
 class CameraReaderGraphFactory @Inject()(cameraSource: Source[Frame, NotUsed],
-                                         tickingSource: Source[Int, Cancellable]) extends LazyLogging
+                                         settings: Settings) extends LazyLogging
 {
   /**
     * Creates a new CameraSource instance
@@ -26,6 +22,6 @@ class CameraReaderGraphFactory @Inject()(cameraSource: Source[Frame, NotUsed],
   def create(gks: GlobalKillSwitch): CameraSource = {
     logger.info("Creating CameraSource")
     // TODO wrap killswitch into a domain object and drop asINstanceof
-    new CameraReaderGraph(cameraSource, tickingSource, gks.sharedKillSwitch).createGraph()
+    new CameraReaderGraph(cameraSource, settings, gks.sharedKillSwitch).createGraph()
   }
 }
