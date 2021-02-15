@@ -1,9 +1,9 @@
-package ru.able.server.camera
+package ru.able.server.model
 
 import java.time.LocalDateTime
 
-import org.bytedeco.javacpp.{BytePointer, opencv_imgcodecs}
 import org.bytedeco.javacpp.opencv_core.Mat
+import org.bytedeco.javacpp.{BytePointer, opencv_imgcodecs}
 import org.bytedeco.javacv.Frame
 import ru.able.util.MediaConversion
 

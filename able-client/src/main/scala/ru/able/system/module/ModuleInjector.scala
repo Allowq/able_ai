@@ -6,6 +6,7 @@ import com.google.inject._
 import ru.able.camera.camera.module.CameraInjector
 import ru.able.camera.motiondetector.bgsubtractor.module.BackgroundSubstractorInjector
 import ru.able.camera.utils.settings.module.SettingsInjector
+import ru.able.client.module.NetworkClientInjector
 import ru.able.router.module.RouterInjector
 
 class ModuleInjector(system: ActorSystem, materializer: Materializer) {
@@ -14,6 +15,7 @@ class ModuleInjector(system: ActorSystem, materializer: Materializer) {
     new SettingsInjector(),
     new BackgroundSubstractorInjector(),
     new CameraInjector(),
-    new RouterInjector()
+    new RouterInjector(),
+    new NetworkClientInjector()
   )
 }

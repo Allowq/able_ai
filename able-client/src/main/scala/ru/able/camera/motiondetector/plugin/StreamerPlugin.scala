@@ -31,20 +31,9 @@ class StreamerPlugin(notifier: ActorRef)(implicit mat: Materializer) extends Plu
       broadcast.mat
         .via(killSwitch.flow)
         .via(pluginKillSwitch.get.flow)
-        .map(f => {
-          logger.debug(" new frame " + f.date)
-
-          val imgMat     = f.imgMat
-          val box_text   = f.date.toString
-          val point      = new opencv_core.Point(50, 20)
-          val scalar     = new opencv_core.Scalar(0, 255, 0, 2.0)
-          val font       = FONT_HERSHEY_PLAIN
-          putText(imgMat, box_text, point, font, 1.0, scalar)
-
-          CameraFrame(imgMat, f.date)
-        })
-        .groupedWithin(5, 1000 millis)
         .async
+        .map(printPluginId)
+        .groupedWithin(5, 1000 millis)
         .runWith(Sink.foreach(sendNotificationBatch))
     }) recover {
       case e: Exception => logger.error(e.getMessage, e)
@@ -56,6 +45,19 @@ class StreamerPlugin(notifier: ActorRef)(implicit mat: Materializer) extends Plu
   }
 
   private def sendNotification(f: CameraFrame) = notifier ! f
+
+  private def printPluginId(cf: CameraFrame): CameraFrame = {
+//    logger.debug(" new frame " + cf.date)
+
+    val box_text_l = "Streamer ====================================="
+    val imgMat     = cf.imgMat
+    val point      = new opencv_core.Point(50, 20)
+    val scalar     = new opencv_core.Scalar(0, 255, 0, 2.0)
+    val font       = FONT_HERSHEY_PLAIN
+    putText(imgMat, box_text_l, point, font, 1.0, scalar)
+
+    CameraFrame(imgMat, cf.date)
+  }
 
   override def stop(): Unit = pluginKillSwitch match {
     case Some(ks) => ks.shutdown()

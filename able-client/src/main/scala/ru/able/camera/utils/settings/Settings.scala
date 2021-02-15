@@ -44,6 +44,22 @@ sealed trait Settings {
   def getDuration(path: String, unit: TimeUnit = TimeUnit.SECONDS): FiniteDuration
 
   def getInt(path: String): Int
+
+  def getNetworkClientHost: String
+
+  def getNetworkClientPort: Int
+
+  def getMaxConnectionsPerHost: Int
+
+  def getMaxFailuresPerHost: Int
+
+  def getFailureRecoveryPeriod: FiniteDuration
+
+  def getInputBufferSize: Int
+
+  def getClientParallelism: Int
+
+  def getProducerParallelism: Int
 }
 
 /**
@@ -65,15 +81,33 @@ class PropertyBasedSettings(config: Config) extends Settings {
   override def getDuration(path: String, unit: TimeUnit): FiniteDuration =
     nonNull(FiniteDuration(config.getDuration(path, unit), unit), path)
 
-  private def options(path: String) =
-    Try(Some(config.getObject(path))).recover { case _ => None }.get
+  override def getInt(path: String): Int = config.getInt(path)
+
+  override def getNetworkClientHost: String = config.getString("NetworkConfig.client.host.address")
+
+  override def getNetworkClientPort: Int = config.getInt("NetworkConfig.client.host.port")
+
+  override def getMaxConnectionsPerHost: Int = config.getInt("NetworkConfig.client.host.max-connections")
+
+  override def getMaxFailuresPerHost: Int = config.getInt("NetworkConfig.client.host.max-failures")
+
+  override def getFailureRecoveryPeriod: FiniteDuration = Duration(
+    config.getDuration("NetworkConfig.client.host.failure-recovery-duration").toNanos,
+    TimeUnit.NANOSECONDS)
+
+  override def getInputBufferSize: Int = config.getInt("NetworkConfig.client.input-buffer-size")
+
+  override def getClientParallelism: Int = config.getInt("NetworkConfig.client.parallelism")
+
+  override def getProducerParallelism: Int = config.getInt("NetworkConfig.pipeline.parallelism")
 
   private def getOptionsMap(path: String) =
     options(path)
       .map(f => f.unwrapped.asScala.toMap)
       .getOrElse(Map.empty)
 
-  override def getInt(path: String): Int = config.getInt(path)
+  private def options(path: String) =
+    Try(Some(config.getObject(path))).recover { case _ => None }.get
 
   private def nonNull[T](value: T, path: String) = Option(value) match {
     case Some(v) => v

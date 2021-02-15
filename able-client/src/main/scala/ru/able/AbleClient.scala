@@ -1,4 +1,4 @@
-package ru.able.client
+package ru.able
 
 import java.awt.event.WindowAdapter
 
@@ -8,17 +8,18 @@ import com.google.inject.Key
 import com.google.inject.name.Names
 import com.typesafe.scalalogging.LazyLogging
 import javax.swing.JFrame.EXIT_ON_CLOSE
-import org.bytedeco.javacv.{CanvasFrame, OpenCVFrameConverter}
+import org.bytedeco.javacv.CanvasFrame
 import ru.able.app.Orchestrator
 import ru.able.camera.motiondetector.bgsubtractor.GaussianMixtureBasedBackgroundSubstractor
 import ru.able.camera.motiondetector.plugin.{MotionDetectorPlugin, StreamerPlugin}
+import ru.able.client.NetworkClient
 import ru.able.plugin.util.ShowImage
 import ru.able.system.module.ModuleInjector
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-object AbleClient extends App with LazyLogging {
+object AbleClientApp extends App with LazyLogging {
 
   System.setProperty("org.bytedeco.javacpp.maxphysicalbytes", "0")
   System.setProperty("org.bytedeco.javacpp.maxbytes", "0")
@@ -33,7 +34,8 @@ object AbleClient extends App with LazyLogging {
   private val modules               = new ModuleInjector(actorSystem, materializer)
   private val orchestator           = modules.injector.getInstance(classOf[Orchestrator])
   private val backgroundSubstractor = modules.injector.getInstance(classOf[GaussianMixtureBasedBackgroundSubstractor])
-  private val notifier              = modules.injector.getInstance(Key.get(classOf[ActorRef], Names.named("Notifier")))
+  private val networkClient         = modules.injector.getInstance(Key.get(classOf[ActorRef], Names.named("NetworkClient")))
+//  private val notifier              = modules.injector.getInstance(Key.get(classOf[ActorRef], Names.named("Notifier")))
 
   lazy val shutdown: Unit = {
     logger.info(s"AbleClient shutdown.")
@@ -43,11 +45,10 @@ object AbleClient extends App with LazyLogging {
 
   val canvas = createCanvas(shutdown)
 
-//  sleep(6000) // nice :(
-
 //  val streamerPlugin = new StreamerPlugin(notifier)(materializer)
   val showImagePlugin = new ShowImage(canvas,"normal")(materializer)
-  val motionDetect = new MotionDetectorPlugin(null, backgroundSubstractor, "motion", notifier)(materializer)
+//  val motionDetect = new MotionDetectorPlugin(null, backgroundSubstractor, "motion", notifier)(materializer)
+  val motionDetect = new MotionDetectorPlugin(null, backgroundSubstractor, "motion", networkClient)(materializer)
 
 //  orchestator.addPlugin(streamerPlugin)
   orchestator.addPlugin(showImagePlugin)

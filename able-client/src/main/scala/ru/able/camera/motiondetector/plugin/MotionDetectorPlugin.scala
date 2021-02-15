@@ -5,6 +5,7 @@ import akka.stream.scaladsl.Flow
 import akka.stream.scaladsl.Sink
 import akka.stream.{KillSwitches, Materializer, SharedKillSwitch}
 import com.typesafe.scalalogging.LazyLogging
+import org.bytedeco.javacpp.opencv_core
 import org.bytedeco.javacpp.opencv_core._
 import org.bytedeco.javacpp.opencv_imgproc._
 import org.bytedeco.javacv._
@@ -12,7 +13,6 @@ import ru.able.camera.camera.CameraFrame
 import ru.able.camera.camera.MotionDetectFrame
 import ru.able.camera.motiondetector.bgsubtractor.BackgroundSubstractor
 import ru.able.camera.motiondetector.stage.BackgroundSubstractorStage
-import ru.able.camera.utils.MediaConversion
 import ru.able.plugin.Plugin
 import ru.able.router.messages.AdvancedPluginStart
 
@@ -34,27 +34,29 @@ class MotionDetectorPlugin(canvas: CanvasFrame,
       broadcast.mat
         .via(killSwitch.flow)
         .via(pluginKillSwitch.get.flow)
+        .async
+        .map(printPluginId)
         .via(new BackgroundSubstractorStage(backgroundSubstractor))
-        .async.via(Flow[MotionDetectFrame].map(erosionAndDilation))
-        .async.via(Flow[MotionDetectFrame].filter(reachedThreshold))
-        .async.via(Flow[MotionDetectFrame].map(_.originalFrame))
-        .async.runWith(Sink.foreach(sendNotification))
-      //        .runWith(new ShowImageStage(canvas, iplImageConverter, name))
+        .via(Flow[MotionDetectFrame].filter(reachedThreshold))
+        .via(Flow[MotionDetectFrame].map(_.originalFrame))
+        .runWith(Sink.foreach(sendNotification))
+//      .runWith(new ShowImageStage(canvas, iplImageConverter, name))
 
     }) recover {
       case e: Exception => logger.error(e.getMessage, e)
     }
 
-  /**
-   * @see https://docs.opencv.org/2.4.13.4/doc/tutorials/imgproc/erosion_dilatation/erosion_dilatation.html
-   */
-  private def erosionAndDilation(backgroundSubstractedFrame: MotionDetectFrame) = {
-    val structuringElement = getStructuringElement(MORPH_RECT, structuringElementSize)
-    val frameAsMat         = backgroundSubstractedFrame.originalFrame.imgMat
-    morphologyEx(frameAsMat, frameAsMat, MORPH_OPEN, structuringElement)
-    //TODO Check release() policy
-//    frameAsMat.release()
-    backgroundSubstractedFrame
+  private def printPluginId(cf: CameraFrame): CameraFrame = {
+    //    logger.debug(" new frame " + cf.date)
+
+    val box_text_l = "Motion Detector ==============================="
+    val imgMat     = cf.imgMat
+    val point      = new opencv_core.Point(50, 60)
+    val scalar     = new opencv_core.Scalar(0, 255, 0, 2.0)
+    val font       = FONT_HERSHEY_PLAIN
+    putText(imgMat, box_text_l, point, font, 1.0, scalar)
+
+    CameraFrame(imgMat, cf.date)
   }
 
   private def reachedThreshold(f: MotionDetectFrame): Boolean =

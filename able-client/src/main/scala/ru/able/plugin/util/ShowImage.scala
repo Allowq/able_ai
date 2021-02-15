@@ -27,17 +27,8 @@ class ShowImage(canvas: CanvasFrame, name: String = "")
       broadcast.mat
         .via(killSwitch.flow)
         .via(pluginKillSwitch.get.flow)
-//        .async
-        .map(f => {
-          val imgMat     = f.imgMat
-          val box_text   = "Streamer ====================================="
-          val point      = new opencv_core.Point(50, 15)
-          val scalar     = new opencv_core.Scalar(0, 255, 0, 2.0)
-          val font       = FONT_HERSHEY_PLAIN
-          putText(imgMat, box_text, point, font, 1.0, scalar)
-          CameraFrame(imgMat, f.date)
-        })
         .async
+        .map(printPluginId)
         .runWith(new ShowImageStage(canvas, name))
     }) recover {
       case e: Exception => logger.error(e.getMessage, e)
@@ -46,5 +37,15 @@ class ShowImage(canvas: CanvasFrame, name: String = "")
   override def stop(): Unit = pluginKillSwitch match {
     case Some(ks) => ks.shutdown()
     case None     => logger.error("shutdown")
+  }
+
+  private def printPluginId(cf: CameraFrame): CameraFrame = {
+    val imgMat     = cf.imgMat
+    val box_text   = cf.date.toString
+    val point      = new opencv_core.Point(50, 40)
+    val scalar     = new opencv_core.Scalar(0, 255, 0, 2.0)
+    val font       = FONT_HERSHEY_PLAIN
+    putText(imgMat, box_text, point, font, 1.0, scalar)
+    CameraFrame(imgMat, cf.date)
   }
 }

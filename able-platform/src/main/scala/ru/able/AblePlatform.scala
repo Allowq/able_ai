@@ -1,20 +1,23 @@
-package ru.able.server
+package ru.able
 
 import java.awt.event.WindowAdapter
 import java.awt.{BorderLayout, Dimension, GridLayout}
-import java.net.ServerSocket
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.{Timer, TimerTask}
 
+import akka.actor.ActorSystem
+import akka.stream.Materializer
 import com.typesafe.scalalogging.LazyLogging
 import javax.swing.JFrame.EXIT_ON_CLOSE
 import javax.swing.{JLabel, JPanel}
 import org.bytedeco.javacpp.avformat
 import org.bytedeco.javacv.CanvasFrame
-import ru.able.server.camera.{CanvasFrameSpecial, SocketFrame}
-import ru.able.util.ObjectInputStreamWithCustomClassLoader
+import ru.able.server.ServerBase
+import ru.able.server.pipeline.FrameSeqHandler
+import ru.able.server.model.{CanvasFrameSpecial, SocketFrame}
+import ru.able.server.protocol.SimpleMessage
 
-object AbleServer extends App with LazyLogging {
+object AblePlatform extends App with LazyLogging {
 
   logger.info(s"Able Platform start up ...")
 
@@ -27,7 +30,11 @@ object AbleServer extends App with LazyLogging {
   val frameDateLabel          = new JLabel()
   val statusLabel             = new JLabel()
 
-  val server                  = new ServerSocket(9999)
+  implicit val actorSystem      = ActorSystem("ServerActorSystem")
+  implicit val materializer     = Materializer.createMaterializer(actorSystem)
+  implicit val executionContext = materializer.system.dispatcher
+
+  val server                  = ServerBase("192.168.0.101", 9999, FrameSeqHandler, SimpleMessage.protocol.reversed)
   var running                 = true
   val frames                  = new LinkedBlockingQueue[CanvasFrameSpecial]()
 
@@ -43,23 +50,23 @@ object AbleServer extends App with LazyLogging {
     System.exit(0)
   })
 
-  while (running) {
-    statusLabel.setText("Server waiting for clients...")
-    val serverSocket = server.accept()
-    val in           = new ObjectInputStreamWithCustomClassLoader(serverSocket.getInputStream())
+//  while (running) {
+//    statusLabel.setText("Server waiting for clients...")
+//    val serverSocket = server.accept()
+//    val in           = new ObjectInputStreamWithCustomClassLoader(serverSocket.getInputStream())
 
-    try {
-      val next = in.readObject().asInstanceOf[Seq[SocketFrame]]
-      frameAddedLabel.setText(s"Added ${next.size} frames.")
-      next.foreach(
-        f => frames.put(new CanvasFrameSpecial(f))
-      )
-    } catch {
-      case e: Exception => logger.error(e.getMessage, e)
-    } finally {
-      serverSocket.close()
-    }
-  }
+//    try {
+//      val next = in.readObject().asInstanceOf[Seq[SocketFrame]]
+//      frameAddedLabel.setText(s"Added ${next.size} frames.")
+//      next.foreach(
+//        f => frames.put(new CanvasFrameSpecial(f))
+//      )
+//    } catch {
+//      case e: Exception => logger.error(e.getMessage, e)
+//    } finally {
+//      serverSocket.close()
+//    }
+//  }
 
   private def createCanvas(shutdown: => Unit): CanvasFrame = {
     val canvas = new CanvasFrame("Able Platform")
@@ -91,12 +98,6 @@ object AbleServer extends App with LazyLogging {
         val frame = frames.take()
         frameDateLabel.setText(s"Frame date: ${frame.date.toString}")
         canvas.showImage(frame.frame)
-
-        //        val file = new File(s"${frame.date.toString}.jpg")
-        //        opencv_imgcodecs.imwrite(file.getAbsolutePath, converterMat.convert(frame.frame))
-        //        opencv_imgcodecs.cvSaveImage(file.getAbsolutePath, converter.convert(frame.frame))
-        //        println(s"file saved to ${file.getAbsolutePath}")
-
       }
       fpsCounterLabel.setText(s"FPS: ${1000 / refreshRate} / Refresh rate: $refreshRate")
     }

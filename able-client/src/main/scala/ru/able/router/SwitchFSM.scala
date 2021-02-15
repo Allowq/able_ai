@@ -1,9 +1,11 @@
 package ru.able.router
 
+import java.util.concurrent.TimeUnit
+
 import akka.actor.{ActorRef, FSM, Props}
 import akka.util.Timeout
-import scala.concurrent.ExecutionContext
 
+import scala.concurrent.ExecutionContext
 import ru.able.camera.utils.settings.Settings
 import ru.able.router.messages.Messages._
 import ru.able.router.messages._
@@ -30,7 +32,6 @@ class SwitchFSM(systemInitializer: ActorRef, settings: Settings)(implicit val ec
 
   startWith(Idle, Stop)
 
-  // TODO: upgrade to use scheduleRouterTimeoutCheck
   when(Waiting) {
     case Event(Status(Right(Ok)), _) =>
       goto(Active)
