@@ -1,10 +1,13 @@
 package ru.able.server.pipeline
 
+import java.util.concurrent.LinkedBlockingQueue
+
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
+import ru.able.server.model.CanvasFrameSpecial
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import ru.able.server.protocol.{Action, ConsumerAction, FrameSeqMessage, ProducerAction, SimpleCommand, SimpleError, MessageFormat, SimpleReply, SimpleStreamChunk}
+import ru.able.server.protocol.{Action, ConsumerAction, FrameSeqMessage, MessageFormat, ProducerAction, SimpleCommand, SimpleError, SimpleReply, SimpleStreamChunk}
 import ru.able.server.protocol.SimpleMessage._
 
 import scala.concurrent.Future

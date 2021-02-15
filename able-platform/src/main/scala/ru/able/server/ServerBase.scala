@@ -17,7 +17,7 @@ object ServerBase {
                      (implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext): Unit =
   {
     val handler = Sink.foreach[Tcp.IncomingConnection] { conn =>
-      val processor = Processor[Cmd, Evt](resolver, 1, true)
+      val processor = Processor[Cmd, Evt](resolver, 1, false)
 
       val flow = Flow.fromGraph(GraphDSL.create() { implicit b =>
         import akka.stream.scaladsl.GraphDSL.Implicits._

@@ -1,6 +1,6 @@
 package ru.able.server.protocol
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectOutputStream}
+import java.io.ByteArrayInputStream
 
 import akka.stream.scaladsl.{BidiFlow, Framing}
 import akka.util.{ByteString, ByteStringBuilder}
