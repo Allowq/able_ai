@@ -1,3 +1,5 @@
 java -jar /Users/allow/Documents/projects/scala_workspace/ableAI/able-ai-platform/tensorflow/target/scala-2.12/tensorflow-0.1.0-SNAPSHOT.jar camera 0 /Users/allow/Documents/projects/scala_workspace/ableAI/able-ai-platform/data/models/default
-
 java -jar /Users/allow/Documents/projects/scala_workspace/ableAI/able-ai-platform/tensorflow/target/scala-2.12/tensorflow-0.1.0-SNAPSHOT.jar video /Users/allow/Documents/projects/scala_workspace/ableAI/able-ai-platform/data/videos/simple.mp4 /Users/allow/Documents/projects/scala_workspace/ableAI/able-ai-platform/data/models/default
+java -jar /Users/allow/Documents/projects/scala_workspace/ableAI/able-ai-platform/able-client/target/scala-2.12/able-client_2.12-0.1.0-SNAPSHOT.jar
+
+cp -R /Users/allow/Documents/projects/scala_workspace/ableAI/able-ai-platform/data/models/default/ssd_inception_v2_coco_2018_01_28 /tmp/

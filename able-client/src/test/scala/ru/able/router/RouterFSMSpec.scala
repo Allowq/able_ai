@@ -72,7 +72,7 @@ class RouterFSMSpec
       "add plugin when Active should start the plugin" in {
         val plugin = mock[Plugin]
         underTest ! AdvancedPluginStart(killSwitch, broadcast)
-        expectMsg(Ready(Ok))
+//        expectMsg(Ready(Ok))
 
         underTest ! Add(plugin)
 
@@ -83,7 +83,7 @@ class RouterFSMSpec
       "add plugin throws exception when Active should respond with error message" in {
         val plugin = mock[Plugin]
         underTest ! AdvancedPluginStart(killSwitch, broadcast)
-        expectMsg(Ready(Ok))
+//        expectMsg(Ready(Ok))
         val message = "exception"
         when(plugin.start(any[AdvancedPluginStart])).thenThrow(new RuntimeException(message))
 
@@ -123,7 +123,7 @@ class RouterFSMSpec
       "remove plugin when Active should stop the plugin" in {
         val plugin = mock[Plugin]
         underTest ! AdvancedPluginStart(killSwitch, broadcast)
-        expectMsg(Ready(Ok))
+//        expectMsg(Ready(Ok))
 
         underTest ! Add(plugin)
         underTest ! Remove(plugin)
@@ -135,7 +135,7 @@ class RouterFSMSpec
       "remove plugin throws exception when Active should respond with error message" in {
         val plugin = mock[Plugin]
         underTest ! AdvancedPluginStart(killSwitch, broadcast)
-        expectMsg(Ready(Ok))
+//        expectMsg(Ready(Ok))
         val message = "exception"
         when(plugin.stop()).thenThrow(new RuntimeException(message))
 
@@ -158,7 +158,7 @@ class RouterFSMSpec
         underTest ! Add(plugin)
         underTest ! AdvancedPluginStart(killSwitch, broadcast)
 
-        expectMsg(Ready(Ok))
+//        expectMsg(Ready(Ok))
         underTest.stateName shouldBe Active
         verifyZeroInteractions(killSwitch, broadcast)
         verify(plugin).start(AdvancedPluginStart(killSwitch, broadcast))
@@ -183,7 +183,7 @@ class RouterFSMSpec
 
         underTest ! Add(plugin)
         underTest ! AdvancedPluginStart(killSwitch, broadcast)
-        expectMsg(Ready(Ok))
+//        expectMsg(Ready(Ok))
         underTest ! Stop
 
         expectMsg(Ready(Finished))
@@ -200,7 +200,7 @@ class RouterFSMSpec
 
         underTest ! Add(plugin)
         underTest ! AdvancedPluginStart(killSwitch, broadcast)
-        expectMsg(Ready(Ok))
+//        expectMsg(Ready(Ok))
         underTest ! Stop
 
         expectMsg(Error(message))

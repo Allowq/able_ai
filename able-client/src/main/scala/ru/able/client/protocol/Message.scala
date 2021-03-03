@@ -1,12 +1,14 @@
 package ru.able.client.protocol
 
 import java.io.{ByteArrayOutputStream, ObjectOutputStream}
+import java.util.UUID
+
 import akka.stream.Materializer
 import akka.stream.scaladsl.{BidiFlow, Framing}
 import akka.util.{ByteString, ByteStringBuilder}
+
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
-
 import ru.able.client.pipeline.Resolver
 import ru.able.communication.SocketFrame
 
@@ -14,7 +16,7 @@ sealed trait MessageFormat {
   def payload: Any
 }
 
-case class FrameSeqMessage(payload: Seq[SocketFrame]) extends MessageFormat
+case class FrameSeqMessage(clientUUID: UUID, payload: Seq[SocketFrame]) extends MessageFormat
 case class SimpleCommand(cmd: Int, payload: String) extends MessageFormat
 case class SimpleReply(payload: String) extends MessageFormat
 case class SimpleStreamChunk(payload: String) extends MessageFormat
@@ -51,7 +53,9 @@ object SimpleMessage {
         bsb.putBytes(x.payload.getBytes)
       case x: FrameSeqMessage =>
         bsb.putInt(2)
-        bsb.putBytes(serialize(x.payload).toByteArray)
+        bsb.putLong(x.clientUUID.getMostSignificantBits)
+        bsb.putLong(x.clientUUID.getLeastSignificantBits)
+        bsb.putBytes(serializeObject(x.payload).toByteArray)
       case x: SimpleReply =>
         bsb.putInt(3)
         bsb.putBytes(x.payload.getBytes)
@@ -66,7 +70,7 @@ object SimpleMessage {
     bsb.result
   }
 
-  private def serialize(value: Any): ByteArrayOutputStream = {
+  private def serializeObject(value: Any): ByteArrayOutputStream = {
     val stream: ByteArrayOutputStream = new ByteArrayOutputStream()
     val out = new ObjectOutputStream(stream)
     out.writeObject(value)
@@ -86,7 +90,7 @@ import ru.able.client.protocol.SimpleMessage._
 object FrameSeqHandler extends Resolver[MessageFormat] {
   def process(implicit mat: Materializer): PartialFunction[MessageFormat, Action] =
   {
-    case FrameSeqMessage(socketFrames) =>
+    case FrameSeqMessage(uuid, socketFrames) =>
       println(socketFrames.foreach(_.date))
       ProducerAction.Signal { x: SimpleCommand => Future(SimpleReply("That's OK!")) }
     case SimpleStreamChunk(x)               => if (x.length > 0) ConsumerAction.ConsumeStreamChunk else ConsumerAction.EndStream

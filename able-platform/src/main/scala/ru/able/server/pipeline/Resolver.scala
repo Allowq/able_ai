@@ -1,13 +1,10 @@
 package ru.able.server.pipeline
 
-import java.util.concurrent.LinkedBlockingQueue
-
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
-import ru.able.server.model.CanvasFrameSpecial
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import ru.able.server.protocol.{Action, ConsumerAction, FrameSeqMessage, MessageFormat, ProducerAction, SimpleCommand, SimpleError, SimpleReply, SimpleStreamChunk}
+import ru.able.server.protocol.{Action, ConsumerAction, FrameSeqMessage, MessageFormat, ProducerAction, SimpleCommand, SimpleError, SimpleMessage, SimpleReply, SimpleStreamChunk}
 import ru.able.server.protocol.SimpleMessage._
 
 import scala.concurrent.Future
@@ -16,12 +13,23 @@ trait Resolver[In] {
   def process(implicit mat: Materializer): PartialFunction[In, Action]
 }
 
+object SimpleHandler extends Resolver[MessageFormat] {
+  def process(implicit mat: Materializer): PartialFunction[MessageFormat, Action] = {
+    case SimpleStreamChunk(x)               => if (x.length > 0) ConsumerAction.ConsumeStreamChunk else ConsumerAction.EndStream
+    case x: SimpleError                     => ConsumerAction.AcceptError
+    case x: SimpleReply                     => ConsumerAction.AcceptSignal
+    case SimpleCommand(CHECK_PING, payload) => ProducerAction.Signal { x: SimpleCommand ⇒ Future(SimpleReply("PONG")) }
+    case x                                  => println("Unhandled: " + x); ConsumerAction.Ignore
+  }
+}
+
 object FrameSeqHandler extends Resolver[MessageFormat] {
   def process(implicit mat: Materializer): PartialFunction[MessageFormat, Action] =
   {
-    case FrameSeqMessage(socketFrames) =>
-      socketFrames.foreach(sf => println(sf.date.toString))
-      ProducerAction.Signal { x: FrameSeqMessage => Future(SimpleReply("That's OK!")) }
+    case FrameSeqMessage(uuid, socketFrames) =>
+      socketFrames.foreach(sf => println(s"${uuid.toString}: ${sf.date.toString}"))
+      ConsumerAction.AcceptSignal
+//      ProducerAction.Signal { x: SimpleCommand => Future(SimpleReply("PING_ACCEPTED")) }
     case SimpleStreamChunk(x) =>
       if (x.length > 0) ConsumerAction.ConsumeStreamChunk else ConsumerAction.EndStream
     case SimpleCommand(CHECK_PING, payload) =>

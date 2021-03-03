@@ -9,7 +9,7 @@ import scala.concurrent.ExecutionContext
 case class Processor[Cmd, Evt](flow: BidiFlow[Command[Cmd], Cmd, Evt, Event[Evt], Any])
 
 object Processor {
-  def apply[Cmd, Evt](resolver: Resolver[Evt], producerParallism: Int, shouldReact: Boolean = false)
+  def apply[Cmd, Evt](resolver: Resolver[Evt], producerParallism: Int, shouldReact: Boolean)
                      (implicit ec: ExecutionContext): Processor[Cmd, Evt] =
   {
     val consumerStage = new ConsumerStage[Evt, Cmd](resolver)

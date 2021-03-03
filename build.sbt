@@ -67,17 +67,24 @@ lazy val AblePlatform =
     .settings(commonSettings)
     .settings(
       name := "able-platform",
+      PB.targets in Compile := Seq(
+        scalapb.gen() -> (sourceManaged in Compile).value
+      ),
       javaCppPresetLibs ++= Seq(
         "ffmpeg" -> "3.4.1"
       ),
       libraryDependencies ++= Seq(
         library.loggingScala,
         library.logbackClassic,
+        library.janino,
+        library.tensorFlow,
+        library.tensorFlowData,
         library.akkaScala,
-        library.janino
+        library.protobufScala,
+        library.akkaVisual
       ),
-      mainClass in (Compile, run) := Some("ru.able.server.AbleServer"),
-      mainClass in assembly := Some("ru.able.server.AbleServer"),
+      mainClass in (Compile, run) := Some("ru.able.AblePlatform"),
+      mainClass in assembly := Some("ru.able.AblePlatform"),
       resourceDirectory in Compile := file(".") / "./able-platform/src/main/resources",
       resourceDirectory in Runtime := file(".") / "./able-platform/src/main/resources",
       fork := true, // prevent classloader issues caused by sbt and opencv
@@ -104,8 +111,8 @@ lazy val AbleClient =
         library.mockitoScala,
         library.akkaStreamTest
       ),
-      mainClass in (Compile, run) := Some("ru.able.client.AbleClient"),
-      mainClass in assembly := Some("ru.able.client.AbleClient"),
+      mainClass in (Compile, run) := Some("ru.able.AbleClient"),
+      mainClass in assembly := Some("ru.able.AbleClient"),
       resourceDirectory in Compile := file(".") / "./able-client/src/main/resources",
       resourceDirectory in Runtime := file(".") / "./able-client/src/main/resources",
       fork := true, // prevent classloader issues caused by sbt and opencv
@@ -149,6 +156,7 @@ lazy val library =
       val javacvScala =     "1.4"
       val guiceScala =      "4.1.0"
       val mockitoScala =    "1.10.19"
+      val akkaVisual =      "1.1.0"
     }
     val betterFiles =         "com.github.pathikrit"  %% "better-files"           % Version.betterFiles
     val dl4j =                "org.deeplearning4j"    % "deeplearning4j-core"     % Version.dl4j
@@ -171,6 +179,7 @@ lazy val library =
     val javacvScala =         "org.bytedeco"          % "javacv-platform"         % Version.javacvScala
     val googleInject =        "com.google.inject"     % "guice"                   % Version.guiceScala
     val mockitoScala =        "org.mockito"           % "mockito-all"             % Version.mockitoScala
+    val akkaVisual =          "de.aktey.akka.visualmailbox" %% "collector"        % Version.akkaVisual
   }
 
 // *****************************************************************************

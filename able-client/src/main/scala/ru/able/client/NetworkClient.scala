@@ -11,6 +11,7 @@ import akka.util.ByteString
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.util.Try
+import java.util.UUID
 
 import ru.able.camera.camera.CameraFrame
 import ru.able.camera.utils.settings.Settings
@@ -210,6 +211,7 @@ class NetworkClient[Cmd, Evt](hosts: Source[HostEvent, NotUsed],
 {
   type Context = Promise[Event[Evt]]
 
+  private val _uuid                  = UUID.randomUUID()
   private val _socketFraneConverter  = new SocketFrameConverter()
   private val _pool                  = java.util.concurrent.Executors.newFixedThreadPool(2)
 
@@ -283,11 +285,11 @@ class NetworkClient[Cmd, Evt](hosts: Source[HostEvent, NotUsed],
   }
 
   override def receive: Receive = {
-
     case frame: CameraFrame =>
       _pool.execute(
         () =>
           ask(FrameSeqMessage(
+            _uuid,
             Seq(_socketFraneConverter.convert(frame))
           ).asInstanceOf[Cmd])
         //TODO: you can try to process reply
@@ -296,6 +298,7 @@ class NetworkClient[Cmd, Evt](hosts: Source[HostEvent, NotUsed],
       _pool.execute(
         () =>
           ask(FrameSeqMessage(
+            _uuid,
             frames.map(_socketFraneConverter.convert)
           ).asInstanceOf[Cmd])
       )

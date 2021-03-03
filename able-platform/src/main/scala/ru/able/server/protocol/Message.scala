@@ -1,8 +1,11 @@
 package ru.able.server.protocol
 
 import java.io.ByteArrayInputStream
+import java.util.UUID
 
-import akka.stream.scaladsl.{BidiFlow, Framing}
+import akka.NotUsed
+import akka.stream.FlowShape
+import akka.stream.scaladsl.{BidiFlow, Flow, Framing}
 import akka.util.{ByteString, ByteStringBuilder}
 import ru.able.server.model.SocketFrame
 import ru.able.util.ObjectInputStreamWithCustomClassLoader
@@ -12,7 +15,7 @@ sealed trait MessageFormat {
 }
 
 case class SimpleCommand(cmd: Int, payload: String) extends MessageFormat
-case class FrameSeqMessage(payload: Seq[SocketFrame]) extends MessageFormat
+case class FrameSeqMessage(clientUUID: UUID, payload: Seq[SocketFrame]) extends MessageFormat
 case class SimpleReply(payload: String) extends MessageFormat
 case class SimpleStreamChunk(payload: String) extends MessageFormat
 case class SimpleError(payload: String) extends MessageFormat
@@ -25,13 +28,24 @@ object SimpleMessage {
 
   implicit val byteOrder = java.nio.ByteOrder.BIG_ENDIAN
 
-  def deserialize(bs: ByteString): MessageFormat = {
+  val maximumMessageLength: Int = 4 << 20
+
+  val flow = BidiFlow.fromFunctions(serialize, deserialize)
+
+  def fullProtocol = flow.atop(Framing.simpleFramingProtocol(maximumMessageLength))
+
+  def decoderFlow: Flow[ByteString, ByteString, NotUsed] = Framing.simpleFramingProtocolDecoder(maximumMessageLength)
+  def deserializeFlow: Flow[ByteString, MessageFormat, NotUsed] = Flow.fromFunction(deserialize)
+  def serializeFlow: Flow[MessageFormat, ByteString, NotUsed] = Flow.fromFunction(serialize)
+  def encoderFlow: Flow[ByteString, ByteString, NotUsed] = Framing.simpleFramingProtocolEncoder(maximumMessageLength)
+
+  private def deserialize(bs: ByteString): MessageFormat = {
     val iter = bs.iterator
     iter.getInt match {
       case 1 =>
         SimpleCommand(iter.getInt, new String(iter.toByteString.toArray))
       case 2 =>
-        FrameSeqMessage(deserializeFrameSeqObj(iter.toByteString))
+        FrameSeqMessage(new UUID(iter.getLong, iter.getLong), deserializeFrameSeqObj(iter.toByteString))
       case 3 =>
         SimpleReply(new String(iter.toByteString.toArray))
       case 4 =>
@@ -41,7 +55,7 @@ object SimpleMessage {
     }
   }
 
-  def serialize(m: MessageFormat): ByteString = {
+  private def serialize(m: MessageFormat): ByteString = {
     val bsb = new ByteStringBuilder()
     m match {
       case x: SimpleCommand =>
@@ -70,8 +84,4 @@ object SimpleMessage {
     objIn.close()
     obj
   }
-
-  val flow = BidiFlow.fromFunctions(serialize, deserialize)
-
-  def protocol = flow.atop(Framing.simpleFramingProtocol(4 << 20))
 }

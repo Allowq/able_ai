@@ -11,15 +11,14 @@ import javax.swing.JFrame.EXIT_ON_CLOSE
 import org.bytedeco.javacv.CanvasFrame
 import ru.able.app.Orchestrator
 import ru.able.camera.motiondetector.bgsubtractor.GaussianMixtureBasedBackgroundSubstractor
-import ru.able.camera.motiondetector.plugin.{MotionDetectorPlugin, StreamerPlugin}
-import ru.able.client.NetworkClient
+import ru.able.camera.motiondetector.plugin.MotionDetectorPlugin
 import ru.able.plugin.util.ShowImage
 import ru.able.system.module.ModuleInjector
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-object AbleClientApp extends App with LazyLogging {
+object AbleClient extends App with LazyLogging {
 
   System.setProperty("org.bytedeco.javacpp.maxphysicalbytes", "0")
   System.setProperty("org.bytedeco.javacpp.maxbytes", "0")

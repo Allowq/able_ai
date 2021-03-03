@@ -2,26 +2,21 @@ package ru.able.camera.motiondetector.plugin
 
 import akka.actor.ActorRef
 import akka.stream.{KillSwitches, Materializer, SharedKillSwitch}
-import akka.stream.scaladsl.Flow
 import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.LazyLogging
 import org.bytedeco.javacpp.opencv_core
 import org.bytedeco.javacpp.opencv_core._
+import org.bytedeco.javacpp.opencv_imgproc.putText
+import scala.concurrent.duration.DurationInt
+import scala.util.Try
+
 import ru.able.camera.camera.CameraFrame
 import ru.able.plugin.Plugin
 import ru.able.router.messages.AdvancedPluginStart
 
-import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.DurationInt
-import scala.concurrent.forkjoin.ForkJoinPool
-import scala.util.Try
-import org.bytedeco.javacpp.opencv_imgproc.putText
-import ru.able.camera.utils.MediaConversion
-
-class StreamerPlugin(notifier: ActorRef)(implicit mat: Materializer) extends Plugin with LazyLogging {
-
-  implicit val ec = ExecutionContext.fromExecutor(new ForkJoinPool(2))
-  var pluginKillSwitch: Option[SharedKillSwitch] = None
+class StreamerPlugin(notifier: ActorRef)(implicit mat: Materializer) extends Plugin with LazyLogging
+{
+    var pluginKillSwitch: Option[SharedKillSwitch] = None
 
   override def start(ps: AdvancedPluginStart): Unit =
     Try({

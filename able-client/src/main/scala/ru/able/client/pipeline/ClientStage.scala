@@ -1,5 +1,7 @@
 package ru.able.client.pipeline
 
+import java.net.InetSocketAddress
+
 import akka.Done
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.{BidiFlow, GraphDSL, RunnableGraph, Tcp}
@@ -7,6 +9,7 @@ import akka.stream.stage.GraphStageLogic.EagerTerminateOutput
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler, TimerGraphStageLogic}
 import akka.stream.{Attributes, BidiShape, ClosedShape, Inlet, Materializer, Outlet}
 import akka.util.ByteString
+import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import ru.able.client.pipeline.ClientStage.{ConnectionClosedWithReasonException, ConnectionClosedWithoutReasonException, HostDown, HostEvent, HostUp, NoConnectionsAvailableException}
 import ru.able.client.protocol.{Command, Event}
 
@@ -290,7 +293,8 @@ class ClientStage[Context, Cmd, Evt](connectionsPerHost: Int,
           val pipeline = b.add(processor
             .flow
             .atop(protocol.reversed)
-            .join(Tcp().outgoingConnection(host.host, host.port)))
+            .join(Tcp().outgoingConnection(host.host, host.port))
+          )
 
           connectionCommandOut.source ~> pipeline.in
           pipeline.out ~> connectionEventIn.sink
