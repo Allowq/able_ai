@@ -80,8 +80,7 @@ lazy val AblePlatform =
         library.tensorFlow,
         library.tensorFlowData,
         library.akkaScala,
-        library.protobufScala,
-        library.akkaVisual
+        library.protobufScala
       ),
       mainClass in (Compile, run) := Some("ru.able.AblePlatform"),
       mainClass in assembly := Some("ru.able.AblePlatform"),
@@ -156,7 +155,6 @@ lazy val library =
       val javacvScala =     "1.4"
       val guiceScala =      "4.1.0"
       val mockitoScala =    "1.10.19"
-      val akkaVisual =      "1.1.0"
     }
     val betterFiles =         "com.github.pathikrit"  %% "better-files"           % Version.betterFiles
     val dl4j =                "org.deeplearning4j"    % "deeplearning4j-core"     % Version.dl4j
@@ -179,7 +177,6 @@ lazy val library =
     val javacvScala =         "org.bytedeco"          % "javacv-platform"         % Version.javacvScala
     val googleInject =        "com.google.inject"     % "guice"                   % Version.guiceScala
     val mockitoScala =        "org.mockito"           % "mockito-all"             % Version.mockitoScala
-    val akkaVisual =          "de.aktey.akka.visualmailbox" %% "collector"        % Version.akkaVisual
   }
 
 // *****************************************************************************
