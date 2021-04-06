@@ -33,24 +33,20 @@ object SimpleMessage {
 
   val maximumMessageLength: Int = 4 << 20
 
-  val flow = BidiFlow.fromFunctions(serialize, deserialize)
-
-  def fullProtocol = flow.atop(Framing.simpleFramingProtocol(maximumMessageLength))
+  def apply[Cmd, Evt](): BidiFlow[Cmd, ByteString, ByteString, Evt, NotUsed] = {
+    BidiFlow
+      .fromFunctions(serialize[Cmd], deserialize[Evt])
+      .atop(Framing.simpleFramingProtocol(maximumMessageLength))
+  }
 
   def decoderFlow: Flow[ByteString, ByteString, NotUsed] = Framing.simpleFramingProtocolDecoder(maximumMessageLength)
   def deserializeFlow: Flow[ByteString, MessageFormat, NotUsed] = Flow.fromFunction(deserialize)
   def serializeFlow: Flow[MessageFormat, ByteString, NotUsed] = Flow.fromFunction(serialize)
   def encoderFlow: Flow[ByteString, ByteString, NotUsed] = Framing.simpleFramingProtocolEncoder(maximumMessageLength)
 
-  def apply[Cmd, Evt](): BidiFlow[Cmd, ByteString, ByteString, Evt, NotUsed] = {
-    BidiFlow
-      .fromFunctions(serialize2[Cmd], deserialize2[Evt])
-      .atop(Framing.simpleFramingProtocol(maximumMessageLength))
-  }
-
-  private def deserialize(bs: ByteString): MessageFormat = {
+  private def deserialize[Cmd](bs: ByteString): Cmd = {
     val iter = bs.iterator
-    iter.getInt match {
+    val command = iter.getInt match {
       case 1 =>
         SimpleCommand(iter.getInt, new String(iter.toByteString.toArray))
       case 2 =>
@@ -65,52 +61,11 @@ object SimpleMessage {
           deserializeObject[Seq[SocketFrame]](iter.toByteString)
         )
     }
+
+    command.asInstanceOf[Cmd]
   }
 
-  private def deserialize2[Cmd](bs: ByteString): Cmd = {
-    val iter = bs.iterator
-    iter.getInt match {
-      case 1 =>
-        SimpleCommand(iter.getInt, new String(iter.toByteString.toArray)).asInstanceOf[Cmd]
-      case 2 =>
-        SimpleReply(new String(iter.toByteString.toArray)).asInstanceOf[Cmd]
-      case 3 =>
-        SimpleStreamChunk(new String(iter.toByteString.toArray)).asInstanceOf[Cmd]
-      case 4 =>
-        SimpleError(new String(iter.toByteString.toArray)).asInstanceOf[Cmd]
-      case 10 =>
-        FrameSeqMessage(
-          new UUID(iter.getLong, iter.getLong),
-          deserializeObject[Seq[SocketFrame]](iter.toByteString)
-        ).asInstanceOf[Cmd]
-    }
-  }
-
-  private def serialize(m: MessageFormat): ByteString = {
-    val bsb = new ByteStringBuilder()
-    m match {
-      case x: SimpleCommand =>
-        bsb.putInt(1)
-        bsb.putInt(x.cmd)
-        bsb.putBytes(x.payload.getBytes)
-      case x: SimpleReply =>
-        bsb.putInt(3)
-        bsb.putBytes(x.payload.getBytes)
-      case x: SimpleStreamChunk =>
-        bsb.putInt(4)
-        bsb.putBytes(x.payload.getBytes)
-      case x: SimpleError =>
-        bsb.putInt(5)
-        bsb.putBytes(x.payload.getBytes)
-      case x: LabelMapMessage =>
-        bsb.putInt(11)
-        bsb.putBytes(serializeObject(x.labelMap).toByteArray)
-      case _ =>
-    }
-    bsb.result
-  }
-
-  private def serialize2[Evt](m: Evt): ByteString = {
+  private def serialize[Evt](m: Evt): ByteString = {
     val bsb = new ByteStringBuilder()
     m match {
       case x: SimpleCommand =>
