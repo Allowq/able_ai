@@ -5,6 +5,7 @@ import java.net.InetAddress
 import java.net.Socket
 import java.net.ConnectException
 import java.time.LocalDateTime
+import scala.util.Try
 
 import com.typesafe.scalalogging.LazyLogging
 import org.bytedeco.javacpp.opencv_core.IplImage
@@ -14,10 +15,9 @@ import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.javacpp.opencv_imgcodecs
 import org.bytedeco.javacpp.opencv_imgcodecs.CV_IMWRITE_JPEG_QUALITY
 import org.bytedeco.javacpp.opencv_imgcodecs.cvEncodeImage
+
 import ru.able.camera.camera.CameraFrame
 import ru.able.camera.utils.MediaConversion
-
-import scala.util.Try
 
 class SocketFrameConverter() {
 

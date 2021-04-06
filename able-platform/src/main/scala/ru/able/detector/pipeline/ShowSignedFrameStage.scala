@@ -1,12 +1,11 @@
-package ru.able.detector.stage
+package ru.able.detector.pipeline
 
-import akka.stream.{Attributes, FlowShape, Inlet, Outlet, SinkShape}
+import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import com.typesafe.scalalogging.LazyLogging
+
+import ru.able.detector.DetectorView
 import ru.able.detector.model.SignedFrame
-import ru.able.detector.view.CanvasDetector
-import ru.able.server.protocol.{Command, MessageFormat, SimpleReply, SingularCommand, SingularEvent}
-import ru.able.server.protocol.ConsumerAction.AcceptSignal
 
 import scala.util.Try
 
@@ -14,7 +13,7 @@ class ShowSignedFrameStage[Cmd] extends GraphStage[FlowShape[SignedFrame, Cmd]] 
 {
   private val in = Inlet[SignedFrame]("ShowImage.in")
   private val out = Outlet[Cmd]("ShowImage.out")
-  private val canvasDetector = new CanvasDetector()
+  private val canvasDetector = new DetectorView()
 
   override def shape: FlowShape[SignedFrame, Cmd] = FlowShape(in, out)
 
@@ -22,7 +21,7 @@ class ShowSignedFrameStage[Cmd] extends GraphStage[FlowShape[SignedFrame, Cmd]] 
 
     override def preStart(): Unit = pull(in)
 
-    override def postStop(): Unit = { }
+    override def postStop(): Unit = canvasDetector.canvas.dispose()
 
     setHandler(in, new InHandler {
       override def onPush(): Unit = {

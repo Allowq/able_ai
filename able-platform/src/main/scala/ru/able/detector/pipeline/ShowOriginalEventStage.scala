@@ -1,9 +1,9 @@
-package ru.able.detector.stage
+package ru.able.detector.pipeline
 
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler}
 import akka.stream.{Attributes, Inlet, SinkShape}
 import com.typesafe.scalalogging.LazyLogging
-import ru.able.detector.view.CanvasDetector
+import ru.able.detector.DetectorView
 
 import scala.util.Try
 import ru.able.server.protocol.{FrameSeqMessage, MessageFormat, SingularEvent}
@@ -15,7 +15,7 @@ object ShowOriginalEventStage {
 class ShowOriginalEventStage[Evt](val clientId: String = "default") extends GraphStage[SinkShape[Evt]] with LazyLogging
 {
   private val in  = Inlet[Evt]("ShowImage.in")
-  private val canvasDetector = new CanvasDetector()
+  private val canvasDetector = new DetectorView()
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     setHandler(in, new InHandler {

@@ -1,4 +1,4 @@
-package ru.able.detector.view
+package ru.able.detector
 
 import java.awt.event.WindowAdapter
 import java.awt.{BorderLayout, Dimension, GridLayout}
@@ -8,9 +8,10 @@ import com.typesafe.scalalogging.LazyLogging
 import javax.swing.JFrame.EXIT_ON_CLOSE
 import javax.swing.{JLabel, JPanel}
 import org.bytedeco.javacv.CanvasFrame
-import ru.able.server.model.{CanvasFrameSpecial, SocketFrame}
+import ru.able.detector.model.CanvasFrameSpecial
+import ru.able.server.model.SocketFrame
 
-class CanvasDetector extends LazyLogging {
+class DetectorView extends LazyLogging {
   private val _mainPanel               = new JPanel()
   private val _framesCounterLabel      = new JLabel()
   private val _frameDateLabel          = new JLabel()
@@ -19,7 +20,7 @@ class CanvasDetector extends LazyLogging {
 
   val canvas: CanvasFrame = createCanvas({
     //TODO: Upgrade it to graceful shutdown (via killswitch or etc)
-    System.exit(0)
+//    System.exit(0)
   })
 
   def updateCanvas(uuid: UUID, cf: CanvasFrameSpecial): Unit = {
@@ -58,7 +59,6 @@ class CanvasDetector extends LazyLogging {
     canvas.addWindowListener(new WindowAdapter() {
       override def windowClosing(windowEvent: java.awt.event.WindowEvent): Unit = {
         logger.debug("Canvas close")
-        shutdown
       }
     })
     canvas

@@ -4,10 +4,9 @@ import akka.actor.ActorSystem
 import akka.stream.Materializer
 import com.typesafe.scalalogging.LazyLogging
 import org.bytedeco.javacpp.avformat
-import ru.able.detector.stage.ShowOriginalEventStage
+
 import ru.able.server.ServerBase
-import ru.able.server.pipeline.FrameSeqHandler
-import ru.able.server.protocol.{Event, MessageFormat, SimpleMessage}
+import ru.able.server.protocol.{SimpleMessage}
 
 object AblePlatform extends App with LazyLogging {
 
@@ -23,9 +22,5 @@ object AblePlatform extends App with LazyLogging {
   implicit val materializer     = Materializer.createMaterializer(actorSystem)
   implicit val executionContext = materializer.system.dispatcher
 
-//  val showImageStage = new ShowOriginalEventStage[Event[MessageFormat]]()
-  ServerBase.applyModern("192.168.0.101", 9999, FrameSeqHandler, SimpleMessage.fullProtocol)
-
-//  val server = new ServerBase(FrameSeqHandler, SimpleMessage.protocol)
-//  server.setupConnection("192.168.0.101", 9999)
+  val server = new ServerBase("127.0.0.1", 9999)
 }

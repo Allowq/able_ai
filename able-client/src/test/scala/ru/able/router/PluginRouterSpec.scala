@@ -6,7 +6,7 @@ import org.scalatest.{Matchers, WordSpec}
 import org.mockito.Mockito.verify
 
 import ru.able.camera.camera.reader.BroadCastRunnableGraph
-import ru.able.camera.camera.reader.KillSwitches.GlobalKillSwitch
+import ru.able.common.Switches.GlobalKillSwitch
 import ru.able.plugin.Plugin
 import ru.able.router.messages.{AdvancedPluginStart, PluginStart}
 

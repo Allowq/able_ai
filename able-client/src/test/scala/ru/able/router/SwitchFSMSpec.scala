@@ -6,7 +6,7 @@ import org.mockito.Mockito.{verify, verifyZeroInteractions, when}
 import org.mockito.Matchers.any
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{Matchers, OneInstancePerTest, WordSpecLike}
-import ru.able.camera.camera.reader.KillSwitches.GlobalKillSwitch
+import ru.able.common.Switches.GlobalKillSwitch
 import ru.able.camera.utils.settings.Settings
 import ru.able.router.messages.{Error, Ready, Response, Start, Status, Stop}
 import ru.able.router.messages.Messages.{AlreadyStarted, Finished, Ok}

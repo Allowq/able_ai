@@ -11,7 +11,7 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.util.Try
 
-import ru.able.app.Orchestrator
+import ru.able.common.Orchestrator
 import ru.able.camera.camera.stage.ShowImageStage
 import ru.able.plugin.util.ShowImage
 import ru.able.router.messages.{Error, PluginStart}

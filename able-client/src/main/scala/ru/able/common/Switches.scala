@@ -1,8 +1,8 @@
-package ru.able.camera.camera.reader
+package ru.able.common
 
 import akka.stream.SharedKillSwitch
 
-object KillSwitches {
+object Switches {
   case class GlobalKillSwitch(sharedKillSwitch: SharedKillSwitch) {
     def shutdown(): Unit = sharedKillSwitch.shutdown()
   }

@@ -1,22 +1,21 @@
 package ru.able.client.protocol
 
-import java.io.{ByteArrayOutputStream, ObjectOutputStream}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
 import java.util.UUID
-
-import akka.stream.Materializer
 import akka.stream.scaladsl.{BidiFlow, Framing}
 import akka.util.{ByteString, ByteStringBuilder}
 
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
-import ru.able.client.pipeline.Resolver
 import ru.able.communication.SocketFrame
 
 sealed trait MessageFormat {
   def payload: Any
 }
 
+// 10
 case class FrameSeqMessage(clientUUID: UUID, payload: Seq[SocketFrame]) extends MessageFormat
+// 11
+case class LabelMapMessage(payload: Map[Int, String]) extends MessageFormat
+
 case class SimpleCommand(cmd: Int, payload: String) extends MessageFormat
 case class SimpleReply(payload: String) extends MessageFormat
 case class SimpleStreamChunk(payload: String) extends MessageFormat
@@ -41,6 +40,8 @@ object SimpleMessage {
         SimpleStreamChunk(new String(iter.toByteString.toArray))
       case 5 =>
         SimpleError(new String(iter.toByteString.toArray))
+      case 11 =>
+        LabelMapMessage(deserializeObject[Map[Int, String]](iter.toByteString))
     }
   }
 
@@ -51,23 +52,32 @@ object SimpleMessage {
         bsb.putInt(1)
         bsb.putInt(x.cmd)
         bsb.putBytes(x.payload.getBytes)
-      case x: FrameSeqMessage =>
+      case x: SimpleReply =>
         bsb.putInt(2)
+        bsb.putBytes(x.payload.getBytes)
+      case x: SimpleStreamChunk ⇒
+        bsb.putInt(3)
+        bsb.putBytes(x.payload.getBytes)
+      case x: SimpleError ⇒
+        bsb.putInt(4)
+        bsb.putBytes(x.payload.getBytes)
+      case x: FrameSeqMessage =>
+        bsb.putInt(10)
         bsb.putLong(x.clientUUID.getMostSignificantBits)
         bsb.putLong(x.clientUUID.getLeastSignificantBits)
         bsb.putBytes(serializeObject(x.payload).toByteArray)
-      case x: SimpleReply =>
-        bsb.putInt(3)
-        bsb.putBytes(x.payload.getBytes)
-      case x: SimpleStreamChunk ⇒
-        bsb.putInt(4)
-        bsb.putBytes(x.payload.getBytes)
-      case x: SimpleError ⇒
-        bsb.putInt(5)
-        bsb.putBytes(x.payload.getBytes)
       case _ =>
     }
     bsb.result
+  }
+
+  private def deserializeObject[T](bytes: ByteString): T = {
+    val byteIn = new ByteArrayInputStream(bytes.toArray)
+    val objIn = new ObjectInputStream(byteIn)
+    val obj: T = objIn.readObject().asInstanceOf[T]
+    byteIn.close()
+    objIn.close()
+    obj
   }
 
   private def serializeObject(value: Any): ByteArrayOutputStream = {
@@ -83,20 +93,4 @@ object SimpleMessage {
   val flow = BidiFlow.fromFunctions(serialize, deserialize)
 
   def protocol = flow.atop(Framing.simpleFramingProtocol(4 << 20))
-}
-
-import ru.able.client.protocol.SimpleMessage._
-
-object FrameSeqHandler extends Resolver[MessageFormat] {
-  def process(implicit mat: Materializer): PartialFunction[MessageFormat, Action] =
-  {
-    case FrameSeqMessage(uuid, socketFrames) =>
-      println(socketFrames.foreach(_.date))
-      ProducerAction.Signal { x: SimpleCommand => Future(SimpleReply("That's OK!")) }
-    case SimpleStreamChunk(x)               => if (x.length > 0) ConsumerAction.ConsumeStreamChunk else ConsumerAction.EndStream
-    case x: SimpleError                     => ConsumerAction.AcceptError
-    case x: SimpleReply                     => ConsumerAction.AcceptSignal
-    case SimpleCommand(CHECK_PING, payload) => ProducerAction.Signal { x: SimpleCommand ⇒ Future(SimpleReply("PING_ACCEPTED")) }
-    case x                                  => println("Unhandled: " + x); ConsumerAction.Ignore
-  }
 }

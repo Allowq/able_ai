@@ -1,4 +1,4 @@
-package ru.able.detector.stage
+package ru.able.detector.pipeline
 
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -11,12 +11,11 @@ import com.typesafe.scalalogging.LazyLogging
 import org.bytedeco.javacpp.opencv_core.{FONT_HERSHEY_PLAIN, LINE_AA, Mat, Point, Scalar}
 import org.bytedeco.javacpp.opencv_imgproc.{putText, rectangle}
 import akka.util.Timeout
+
 import scala.util.Try
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
-
-import ru.able.detector.model.{DetectionOutput, SignedFrame}
-import ru.able.server.model.CanvasFrameSpecial
+import ru.able.detector.model.{CanvasFrameSpecial, DetectionOutput, SignedFrame}
 import ru.able.util.MediaConversion
 
 class DetectStage(detectorController: ActorRef) extends GraphStage[FlowShape[SignedFrame, SignedFrame]] with LazyLogging
@@ -34,7 +33,7 @@ class DetectStage(detectorController: ActorRef) extends GraphStage[FlowShape[Sig
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
 
     override def preStart(): Unit = {
-      val future = (detectorController ? "get_dictionary").mapTo[Map[Int, String]]
+      val future = (detectorController ? "getDictionary").mapTo[Map[Int, String]]
       try {
         Await.result(future, askTimeout.duration) match {
           case data: Map[Int, String] => _labels = Some(data)

@@ -5,7 +5,8 @@ import com.google.inject.name.Named
 import com.google.inject.{Inject, Provider}
 import ru.able.camera.utils.settings.Settings
 import ru.able.client.NetworkClient
-import ru.able.client.protocol.{FrameSeqHandler, SimpleMessage}
+import ru.able.client.pipeline.FrameSeqHandler
+import ru.able.client.protocol.SimpleMessage
 
 import scala.concurrent.ExecutionContext
 

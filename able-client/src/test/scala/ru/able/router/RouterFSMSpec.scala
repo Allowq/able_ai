@@ -11,7 +11,7 @@ import org.scalatest.{Matchers, OneInstancePerTest, WordSpecLike}
 import org.mockito.Matchers.any
 import org.mockito.Mockito.{verify, when, verifyZeroInteractions}
 import ru.able.camera.camera.reader.BroadCastRunnableGraph
-import ru.able.camera.camera.reader.KillSwitches.GlobalKillSwitch
+import ru.able.common.Switches.GlobalKillSwitch
 import ru.able.camera.utils.settings.Settings
 import ru.able.plugin.Plugin
 import ru.able.router.RouterFSM.{Add, Remove}

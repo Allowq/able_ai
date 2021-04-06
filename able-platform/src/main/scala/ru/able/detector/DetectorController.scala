@@ -1,24 +1,38 @@
-package ru.able.detector.controller
+package ru.able.detector
 
 import java.nio.ByteBuffer
 
-import akka.actor.{Actor, ActorLogging, Props}
-import com.typesafe.config.ConfigFactory
-import org.bytedeco.javacpp.opencv_imgcodecs.imread
+import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.stream.FlowShape
+import akka.stream.scaladsl.{Flow, GraphDSL}
 import org.bytedeco.javacpp.opencv_core.Mat
 import org.bytedeco.javacpp.opencv_imgproc.{COLOR_BGR2RGB, cvtColor}
-import org.platanios.tensorflow.api.Tensor
-import org.platanios.tensorflow.api._
+import org.platanios.tensorflow.api.{Tensor, _}
 import ru.able.detector.model.{DetectionOutput, DetectorModel, DetectorViaFileDescription}
+import ru.able.detector.pipeline.{DetectStage, FilterFrameStage, ShowSignedFrameStage}
+import ru.able.server.protocol.{Command, Event}
 
 object DetectorController {
   def props = Props(new DetectorController())
+
+  def getDetectionFlow[Cmd, Evt](detectController: ActorRef): Flow[Event[Evt], Command[Cmd], Any] = {
+    Flow.fromGraph[Event[Evt], Command[Cmd], Any] {
+      GraphDSL.create() { implicit b =>
+        import GraphDSL.Implicits._
+
+        val pipelineIn = b.add(new FilterFrameStage[Event[Evt]])
+        val pipelineOut = b.add(new ShowSignedFrameStage[Command[Cmd]])
+
+        pipelineIn ~> b.add(new DetectStage(detectController).async) ~> pipelineOut
+
+        FlowShape(pipelineIn.in, pipelineOut.out)
+      }
+    }
+  }
 }
 
 class DetectorController private (private val _detectorModel: DetectorModel) extends Actor with ActorLogging
 {
-  private lazy val _config = ConfigFactory.defaultApplication().resolve().getConfig("sourceDescription")
-
   def this(folderPath: Option[String] = None) {
     this(
       new DetectorViaFileDescription(folderPath).defineDetector()
@@ -30,7 +44,7 @@ class DetectorController private (private val _detectorModel: DetectorModel) ext
       sender ! detect(matToTensor(image))
     case index: Int =>
       sender ! _detectorModel.labelMap.getOrElse(index, "unknown")
-    case "get_dictionary" =>
+    case "getDictionary" =>
       sender ! _detectorModel.labelMap
   }
 
@@ -47,7 +61,7 @@ class DetectorController private (private val _detectorModel: DetectorModel) ext
     val feeds = Map(imagePlaceholder -> image)
 
     // Run the detection model
-    val Seq(boxes, scores, classes, num) = _detectorModel.session.run(
+    val Seq(boxes, scores, classes, num) = _detectorModel.tfSession.run(
       fetches = Seq(detectionBoxes, detectionScores, detectionClasses, numDetections),
       feeds = feeds
     )

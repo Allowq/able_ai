@@ -9,7 +9,7 @@ import com.google.inject.name.Names
 import com.typesafe.scalalogging.LazyLogging
 import javax.swing.JFrame.EXIT_ON_CLOSE
 import org.bytedeco.javacv.CanvasFrame
-import ru.able.app.Orchestrator
+import ru.able.common.Orchestrator
 import ru.able.camera.motiondetector.bgsubtractor.GaussianMixtureBasedBackgroundSubstractor
 import ru.able.camera.motiondetector.plugin.MotionDetectorPlugin
 import ru.able.plugin.util.ShowImage

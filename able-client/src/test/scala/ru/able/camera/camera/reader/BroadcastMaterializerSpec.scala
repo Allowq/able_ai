@@ -1,23 +1,18 @@
 package ru.able.camera.camera.reader
 
-import akka.Done
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import akka.testkit.{ImplicitSender, TestKit}
-import org.mockito.Mockito.{verify, verifyNoMoreInteractions, when}
 import org.scalatest.{AsyncWordSpecLike, OneInstancePerTest}
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest._
-import ru.able.camera.camera.graph.CameraReaderGraph.CameraSource
-import ru.able.camera.camera.graph.factory.{CameraReaderGraphFactory, SourceBroadCastFactory}
-
-import scala.concurrent.{Future, TimeoutException}
-import ru.able.camera.camera.reader.BroadcastMaterializerSpec._
-import ru.able.camera.camera.reader.BroadcastMaterializer._
-import ru.able.camera.camera.reader.KillSwitches.GlobalKillSwitch
-import ru.able.camera.utils.settings.Settings
 import testutils.StopSystemAfterAll
 import testutils.TestSystem.TestActorSystem
+
+import ru.able.camera.camera.graph.CameraReaderGraph.CameraSource
+import ru.able.camera.camera.graph.factory.{CameraReaderGraphFactory, SourceBroadCastFactory}
+import ru.able.common.Switches.GlobalKillSwitch
+import ru.able.camera.utils.settings.Settings
 
 object BroadcastMaterializerSpec{
   private val exception = new RuntimeException("message")

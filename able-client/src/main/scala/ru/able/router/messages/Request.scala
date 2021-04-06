@@ -2,7 +2,7 @@ package ru.able.router.messages
 
 import akka.stream.KillSwitch
 import ru.able.camera.camera.reader.BroadCastRunnableGraph
-import ru.able.camera.camera.reader.KillSwitches.GlobalKillSwitch
+import ru.able.common.Switches.GlobalKillSwitch
 
 sealed trait Request
 case object Stop extends Request

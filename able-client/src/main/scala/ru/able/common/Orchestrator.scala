@@ -1,4 +1,4 @@
-package ru.able.app
+package ru.able.common
 
 import akka.actor.ActorRef
 import akka.stream.KillSwitches
@@ -6,8 +6,7 @@ import akka.util.Timeout
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.typesafe.scalalogging.LazyLogging
-
-import ru.able.camera.camera.reader.KillSwitches.GlobalKillSwitch
+import ru.able.common.Switches.GlobalKillSwitch
 import ru.able.camera.utils.settings.Settings
 import ru.able.plugin.Plugin
 import ru.able.router.RouterFSM.{Add, Remove}

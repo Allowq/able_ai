@@ -1,4 +1,4 @@
-package ru.able.app
+package ru.able.common
 
 import java.util.concurrent.TimeUnit
 

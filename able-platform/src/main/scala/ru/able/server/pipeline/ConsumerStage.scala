@@ -3,11 +3,11 @@ package ru.able.server.pipeline
 import akka.stream._
 import akka.stream.scaladsl.Source
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
-
+import ru.able.server.controllers.flow.ResolversFactory.BaseResolver
 import ru.able.server.protocol.ConsumerAction.{AcceptError, AcceptSignal, ConsumeChunkAndEndStream, ConsumeStreamChunk, EndStream, Ignore, StartStream}
 import ru.able.server.protocol.{Event, ProducerAction, SingularErrorEvent, SingularEvent, StreamEvent}
 
-class ConsumerStage[Evt, Cmd](resolver: Resolver[Evt])
+class ConsumerStage[Evt, Cmd](resolver: BaseResolver[Evt])
   extends GraphStage[FanOutShape2[Evt, (Event[Evt], ProducerAction[Evt, Cmd]), Event[Evt]]]
 {
   private val eventIn = Inlet[Evt]("ConsumerStage.Event.In")
@@ -50,7 +50,7 @@ class ConsumerStage[Evt, Cmd](resolver: Resolver[Evt])
       override def onPush(): Unit = {
         val chunk = grab(eventIn)
 
-        resolver.process(mat)(chunk) match {
+        resolver.process(chunk) match {
           case ConsumeStreamChunk =>
             chunkSource.push(chunk)
 
@@ -105,7 +105,7 @@ class ConsumerStage[Evt, Cmd](resolver: Resolver[Evt])
     override def onPush(): Unit = {
       val evt = grab(eventIn)
 
-      resolver.process(mat)(evt) match {
+      resolver.process(evt) match {
         case x: ProducerAction.Signal[Evt, Cmd]        => push(actionOut, (SingularEvent(evt), x))
         case x: ProducerAction.ProduceStream[Evt, Cmd] => push(actionOut, (SingularEvent(evt), x))
         case x: ProducerAction.ConsumeStream[Evt, Cmd] => startStreamForAction(evt, x)

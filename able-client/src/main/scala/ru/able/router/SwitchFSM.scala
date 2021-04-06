@@ -1,11 +1,9 @@
 package ru.able.router
 
-import java.util.concurrent.TimeUnit
-
 import akka.actor.{ActorRef, FSM, Props}
 import akka.util.Timeout
-
 import scala.concurrent.ExecutionContext
+
 import ru.able.camera.utils.settings.Settings
 import ru.able.router.messages.Messages._
 import ru.able.router.messages._

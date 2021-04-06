@@ -3,6 +3,7 @@ package ru.able.detector.model
 import java.io.{BufferedInputStream, File, FileInputStream}
 import java.net.URL
 
+import scala.util.matching.Regex
 import scala.io.Source
 import sys.process._
 import com.typesafe.config.ConfigFactory
@@ -10,8 +11,6 @@ import org.tensorflow.framework.GraphDef
 import org.platanios.tensorflow.api.{Graph, Session}
 
 import object_detection_structures.protos.string_int_label_map.{StringIntLabelMap, StringIntLabelMapItem}
-
-import scala.util.matching.Regex
 
 final case object DetectorViaFileDescription {
   private lazy val _config = ConfigFactory.defaultApplication().resolve().getConfig("modelDescription")
