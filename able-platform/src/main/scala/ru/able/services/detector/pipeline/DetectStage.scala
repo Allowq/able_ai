@@ -1,4 +1,4 @@
-package ru.able.detector.pipeline
+package ru.able.services.detector.pipeline
 
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -15,7 +15,8 @@ import akka.util.Timeout
 import scala.util.Try
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
-import ru.able.detector.model.{CanvasFrameSpecial, DetectionOutput, SignedFrame}
+
+import ru.able.services.detector.model.{CanvasFrameSpecial, DetectionOutput, SignedFrame}
 import ru.able.util.MediaConversion
 
 class DetectStage(detectorController: ActorRef) extends GraphStage[FlowShape[SignedFrame, SignedFrame]] with LazyLogging
@@ -78,7 +79,7 @@ class DetectStage(detectorController: ActorRef) extends GraphStage[FlowShape[Sig
     }
 
     private def drawBoundingBoxes(image: Mat, detectionOutput: DetectionOutput): Mat = {
-      for (i <- 0 until detectionOutput.boxes.shape.size(1)) {
+      for (i: Int <- 0 until detectionOutput.boxes.shape.size(1)) {
         val score = detectionOutput.scores(0, i).scalar.asInstanceOf[Float]
 
         if (score > 0.5) {
@@ -89,9 +90,9 @@ class DetectStage(detectorController: ActorRef) extends GraphStage[FlowShape[Sig
           val ymax = (box(2) * image.size().height()).toInt
           val xmax = (box(3) * image.size().width()).toInt
 
-          val label = _labels.getOrElse("unknown") match {
-            case string: String => string
-            case m: Map[Int, String] => m.getOrElse(i + 1, "unknown")
+          val label: String = _labels match {
+            case Some(value: Map[Int, String]) => value.getOrElse(i + 1, "unknown")
+            case None => "unknown"
           }
 
           // draw score value

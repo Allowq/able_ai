@@ -2,29 +2,41 @@ package ru.able.services.session.model
 
 import java.util.UUID
 
-import akka.stream.scaladsl.Tcp
+import akka.Done
+import akka.stream.UniqueKillSwitch
+import akka.stream.scaladsl.{RunnableGraph, Tcp}
 
-sealed trait BaseDeviceState
-case object Foundation extends BaseDeviceState
-case object Definition extends BaseDeviceState
-case object Initialization extends BaseDeviceState
-case object Provision extends BaseDeviceState
-case object Exploitation extends BaseDeviceState
+import scala.concurrent.Future
 
-trait BaseSession {
-  def state: BaseDeviceState
-  def deviceUUID: UUID
-  def source: Tcp.IncomingConnection
+object SessionController {
+
+  case class SessionID(uuid: UUID)
+
+  sealed trait BaseDeviceState
+  case object Foundation extends BaseDeviceState
+  case object Definition extends BaseDeviceState
+  case object Initialization extends BaseDeviceState
+  case object Provision extends BaseDeviceState
+  case object Exploitation extends BaseDeviceState
+
+  trait BaseSession {
+    def state: BaseDeviceState
+    def deviceID: UUID
+  }
+
+  case class DeviceSession(state: BaseDeviceState,
+                           deviceID: UUID) extends BaseSession
+
+  sealed trait TwinControllerRequest
+  case class RegisterNewDeviceTwin(conn: Tcp.IncomingConnection) extends TwinControllerRequest
+  case class ResetDeviceTwin(conn: Tcp.IncomingConnection) extends TwinControllerRequest
+
+  sealed trait TwinControllerResponse
+  case class DeviceTwinCreated(graph: RunnableGraph[(UniqueKillSwitch, Future[Done])]) extends TwinControllerResponse
+  case object DeviceTwinUpdated extends TwinControllerResponse
+
+  sealed trait SessionState
+  case class SessionUpdated(sessionID: SessionID) extends SessionState
+  case class SessionNotChanged(sessionID: SessionID) extends SessionState
+  case object SessionNotFound extends SessionState
 }
-
-case class DeviceSession(state: BaseDeviceState,
-                         deviceUUID: UUID,
-                         source: Tcp.IncomingConnection) extends BaseSession
-
-sealed trait SessionRequest
-case class CheckSessionExist(conn: Tcp.IncomingConnection) extends SessionRequest
-case class ResetSession(conn: Tcp.IncomingConnection) extends SessionRequest
-
-sealed trait SessionResponse
-case object SessionUpdated extends SessionResponse
-case object SessionNotFound extends SessionResponse

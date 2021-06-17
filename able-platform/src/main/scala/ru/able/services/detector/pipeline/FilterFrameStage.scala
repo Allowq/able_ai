@@ -1,13 +1,15 @@
-package ru.able.detector.pipeline
+package ru.able.services.detector.pipeline
 
 import java.util.UUID
 
 import akka.stream.{Attributes, FlowShape, Inlet, Materializer, Outlet}
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import com.typesafe.scalalogging.LazyLogging
+
 import ru.able.server.model.SocketFrame
-import ru.able.server.protocol.{FrameSeqMessage, SingularEvent}
-import ru.able.detector.model.{CanvasFrameSpecial, SignedFrame}
+import ru.able.server.controllers.flow.model.FrameSeqMessage
+import ru.able.server.controllers.flow.protocol.SingularEvent
+import ru.able.services.detector.model.{CanvasFrameSpecial, SignedFrame}
 
 import scala.util.Try
 

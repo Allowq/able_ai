@@ -6,7 +6,6 @@ import com.typesafe.scalalogging.LazyLogging
 import org.bytedeco.javacpp.avformat
 
 import ru.able.server.ServerBase
-import ru.able.server.protocol.{SimpleMessage}
 
 object AblePlatform extends App with LazyLogging {
 

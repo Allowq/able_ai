@@ -1,9 +1,9 @@
-package ru.able.server.pipeline
+package ru.able.server.controllers.flow.stages
 
 import akka.stream._
 import akka.stream.scaladsl.Source
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
-import ru.able.server.protocol.{Command, SingularCommand, StreamingCommand}
+import ru.able.server.controllers.flow.protocol.{Command, SingularCommand, StreamingCommand}
 
 class ProducerStage[In, Out] extends GraphStage[FlowShape[Command[Out], Out]] {
   private val in = Inlet[Command[Out]]("ProducerStage.Command.In")
@@ -54,7 +54,8 @@ class ProducerStage[In, Out] extends GraphStage[FlowShape[Command[Out], Out]] {
       setHandler(out, new OutHandler {
         override def onPull(): Unit = sinkIn.pull()
 
-        override def onDownstreamFinish(): Unit = {
+        // TODO: Uncover cause
+        override def onDownstreamFinish(cause: Throwable): Unit = {
           completeStage()
           sinkIn.cancel()
         }

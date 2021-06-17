@@ -1,19 +1,21 @@
-package ru.able.detector
+package ru.able.services.detector
 
 import java.nio.ByteBuffer
 
-import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
 import akka.stream.FlowShape
 import akka.stream.scaladsl.{Flow, GraphDSL}
 import org.bytedeco.javacpp.opencv_core.Mat
 import org.bytedeco.javacpp.opencv_imgproc.{COLOR_BGR2RGB, cvtColor}
 import org.platanios.tensorflow.api.{Tensor, _}
-import ru.able.detector.model.{DetectionOutput, DetectorModel, DetectorViaFileDescription}
-import ru.able.detector.pipeline.{DetectStage, FilterFrameStage, ShowSignedFrameStage}
-import ru.able.server.protocol.{Command, Event}
+import ru.able.server.controllers.flow.protocol.{Command, Event}
+import ru.able.services.detector.model.{DetectionOutput, DetectorModel, DetectorViaFileDescription}
+import ru.able.services.detector.pipeline.{DetectStage, FilterFrameStage, ShowSignedFrameStage}
 
 object DetectorController {
-  def props = Props(new DetectorController())
+
+  def apply()(implicit system: ActorSystem): ActorRef =
+    system.actorOf( Props(new DetectorController()), "DetectorControllerActor")
 
   def getDetectionFlow[Cmd, Evt](detectController: ActorRef): Flow[Event[Evt], Command[Cmd], Any] = {
     Flow.fromGraph[Event[Evt], Command[Cmd], Any] {

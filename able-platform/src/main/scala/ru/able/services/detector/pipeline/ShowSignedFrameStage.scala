@@ -1,11 +1,10 @@
-package ru.able.detector.pipeline
+package ru.able.services.detector.pipeline
 
 import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import com.typesafe.scalalogging.LazyLogging
-
-import ru.able.detector.DetectorView
-import ru.able.detector.model.SignedFrame
+import ru.able.services.detector.DetectorView
+import ru.able.services.detector.model.SignedFrame
 
 import scala.util.Try
 

@@ -2,11 +2,12 @@ package ru.able.server.controllers.flow
 
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
-import ru.able.server.controllers.flow.model.{BasicRT, ExtendedRT, FrameSeqRT, ResolverType}
-import ru.able.server.protocol.SimpleMessage.{CHECK_PING, ECHO, TOTAL_CHUNK_SIZE}
-import ru.able.server.protocol.{Action, ConsumerAction, FrameSeqMessage, MessageFormat, ProducerAction, SimpleCommand, SimpleError, SimpleReply, SimpleStreamChunk}
+import ru.able.server.controllers.flow.model.ResolversFactory.{BasicRT, ExtendedRT, FrameSeqRT, ResolverType}
 
 import scala.concurrent.{ExecutionContext, Future}
+import ru.able.server.controllers.flow.protocol.MessageProtocol._
+import ru.able.server.controllers.flow.model.{FrameSeqMessage, MessageFormat, SimpleCommand, SimpleError, SimpleReply, SimpleStreamChunk}
+import ru.able.server.controllers.flow.protocol.{Action, ConsumerAction, ProducerAction}
 
 object ResolversFactory {
 
@@ -20,7 +21,11 @@ object ResolversFactory {
       case x: SimpleError                     => ConsumerAction.AcceptError
       case x: SimpleReply                     => ConsumerAction.AcceptSignal
       case SimpleCommand(CHECK_PING, payload) => ProducerAction.Signal { x: SimpleCommand ⇒ Future(SimpleReply("PONG")) }
-      case x                                  => println("Unhandled: " + x); ConsumerAction.Ignore
+      case x                                  => {
+        println("Unhandled: " + x)
+//        ProducerAction.Signal { _: FrameSeqMessage => Future(SimpleReply("PING_ACCEPTED")) }
+        ConsumerAction.Ignore
+      }
     }
   }
 

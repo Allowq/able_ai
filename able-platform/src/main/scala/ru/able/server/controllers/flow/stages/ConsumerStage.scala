@@ -1,11 +1,11 @@
-package ru.able.server.pipeline
+package ru.able.server.controllers.flow.stages
 
 import akka.stream._
 import akka.stream.scaladsl.Source
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import ru.able.server.controllers.flow.ResolversFactory.BaseResolver
-import ru.able.server.protocol.ConsumerAction.{AcceptError, AcceptSignal, ConsumeChunkAndEndStream, ConsumeStreamChunk, EndStream, Ignore, StartStream}
-import ru.able.server.protocol.{Event, ProducerAction, SingularErrorEvent, SingularEvent, StreamEvent}
+import ru.able.server.controllers.flow.protocol.ConsumerAction._
+import ru.able.server.controllers.flow.protocol.{Event, ProducerAction, SingularErrorEvent, SingularEvent, StreamEvent}
 
 class ConsumerStage[Evt, Cmd](resolver: BaseResolver[Evt])
   extends GraphStage[FanOutShape2[Evt, (Event[Evt], ProducerAction[Evt, Cmd]), Event[Evt]]]
@@ -29,8 +29,6 @@ class ConsumerStage[Evt, Cmd](resolver: BaseResolver[Evt])
     * Substream Logic
     *
     * */
-
-    implicit def mat = this.materializer
 
     val pullThroughHandler = new OutHandler {
       override def onPull() = {
@@ -115,7 +113,7 @@ class ConsumerStage[Evt, Cmd](resolver: BaseResolver[Evt])
         case StartStream                               => startStream(None)
         case ConsumeStreamChunk                        => startStream(Some(evt))
         case ConsumeChunkAndEndStream                  => push(signalOut, StreamEvent(Source.single(evt)))
-        case Ignore                                    => ()
+        case Ignore                                    => push(signalOut, SingularEvent(evt))
       }
     }
 

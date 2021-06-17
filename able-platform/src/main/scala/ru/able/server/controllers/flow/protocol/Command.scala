@@ -1,4 +1,4 @@
-package ru.able.server.protocol
+package ru.able.server.controllers.flow.protocol
 
 import akka.stream.scaladsl.Source
 

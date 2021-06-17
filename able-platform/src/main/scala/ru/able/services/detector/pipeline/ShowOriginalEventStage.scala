@@ -1,12 +1,13 @@
-package ru.able.detector.pipeline
+package ru.able.services.detector.pipeline
 
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler}
 import akka.stream.{Attributes, Inlet, SinkShape}
 import com.typesafe.scalalogging.LazyLogging
-import ru.able.detector.DetectorView
+import ru.able.server.controllers.flow.model.{FrameSeqMessage, MessageFormat}
+import ru.able.server.controllers.flow.protocol.SingularEvent
+import ru.able.services.detector.DetectorView
 
 import scala.util.Try
-import ru.able.server.protocol.{FrameSeqMessage, MessageFormat, SingularEvent}
 
 object ShowOriginalEventStage {
   def apply[Evt](clientId: String): GraphStage[SinkShape[Evt]] = new ShowOriginalEventStage(clientId)
@@ -32,6 +33,8 @@ class ShowOriginalEventStage[Evt](val clientId: String = "default") extends Grap
       Try {
         msg match {
           case FrameSeqMessage(uuid, socketFrames) => canvasDetector.updateCanvas(uuid, socketFrames)
+          // TODO: Repair it
+          case _ =>
         }
       } recover {
         case e: Throwable => logger.error(e.getMessage, e)

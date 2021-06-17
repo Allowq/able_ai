@@ -1,4 +1,4 @@
-package ru.able.detector.model
+package ru.able.services.detector.model
 
 import java.io.{BufferedInputStream, File, FileInputStream}
 import java.net.URL

@@ -1,4 +1,4 @@
-package ru.able.detector
+package ru.able.services.detector
 
 import java.awt.event.WindowAdapter
 import java.awt.{BorderLayout, Dimension, GridLayout}
@@ -8,8 +8,8 @@ import com.typesafe.scalalogging.LazyLogging
 import javax.swing.JFrame.EXIT_ON_CLOSE
 import javax.swing.{JLabel, JPanel}
 import org.bytedeco.javacv.CanvasFrame
-import ru.able.detector.model.CanvasFrameSpecial
 import ru.able.server.model.SocketFrame
+import ru.able.services.detector.model.CanvasFrameSpecial
 
 class DetectorView extends LazyLogging {
   private val _mainPanel               = new JPanel()

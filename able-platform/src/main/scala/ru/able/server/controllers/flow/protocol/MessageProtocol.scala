@@ -1,29 +1,16 @@
-package ru.able.server.protocol
+package ru.able.server.controllers.flow.protocol
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectOutputStream}
 import java.util.UUID
 
 import akka.NotUsed
-import akka.stream.scaladsl.{BidiFlow, Flow, Framing, Keep}
+import akka.stream.scaladsl.{BidiFlow, Flow, Framing}
 import akka.util.{ByteString, ByteStringBuilder}
+import ru.able.server.controllers.flow.model._
 import ru.able.server.model.SocketFrame
 import ru.able.util.ObjectInputStreamWithCustomClassLoader
 
-sealed trait MessageFormat {
-  def payload: Any
-}
-
-// 10
-case class FrameSeqMessage(clientUUID: UUID, payload: Seq[SocketFrame]) extends MessageFormat
-// 11
-case class LabelMapMessage(labelMap: Map[Int, String])
-
-case class SimpleCommand(cmd: Int, payload: String) extends MessageFormat
-case class SimpleReply(payload: String) extends MessageFormat
-case class SimpleStreamChunk(payload: String) extends MessageFormat
-case class SimpleError(payload: String) extends MessageFormat
-
-object SimpleMessage {
+object MessageProtocol {
   val SOCKET_FRAMES = 1
   val TOTAL_CHUNK_SIZE = 2
   val ECHO = 3
@@ -83,7 +70,7 @@ object SimpleMessage {
         bsb.putBytes(x.payload.getBytes)
       case x: LabelMapMessage =>
         bsb.putInt(11)
-        bsb.putBytes(serializeObject(x.labelMap).toByteArray)
+        bsb.putBytes(serializeObject(x.payload).toByteArray)
       case _ =>
     }
     bsb.result
