@@ -16,8 +16,8 @@ import ru.able.server.controllers.flow.model.FlowController.BasicFT
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration.Duration
 import ru.able.server.controllers.flow.FlowController
-import ru.able.server.controllers.flow.model.LabelMapMessage
-import ru.able.server.controllers.flow.protocol.SingularCommand
+import ru.able.server.controllers.flow.model.{LabelMapMessage, SimpleCommand}
+import ru.able.server.controllers.flow.protocol.{MessageProtocol, SingularCommand}
 import ru.able.services.detector.DetectorController
 import ru.able.services.session.SessionController
 import ru.able.services.session.model.SessionController.{DeviceTwinCreated, DeviceTwinUpdated, RegisterNewDeviceTwin, ResetDeviceTwin, SessionID, SessionNotChanged, SessionNotFound, SessionUpdated, TwinControllerRequest, TwinControllerResponse}
@@ -66,25 +66,31 @@ final class DeviceTwinController private (implicit system: ActorSystem, ec: Exec
     )
   }
 
-  def temp(remoteAddress: InetSocketAddress)(implicit system: ActorSystem, ec: ExecutionContext): Unit = {
+  def requestDeviceUUID(remoteAddress: InetSocketAddress): Unit = {
+    _twinConnections.get(remoteAddress).map { twinID =>
+      _twinMap.get(twinID).map { deviceTwin =>
+        deviceTwin.commandPublisher.map { publisher =>
+          publisher ! SingularCommand(SimpleCommand(MessageProtocol.UUID, ""))
+        }
+      }
+    }
+  }
+
+  def sendLabelMap(remoteAddress: InetSocketAddress)(implicit system: ActorSystem, ec: ExecutionContext): Unit = {
     implicit val askTimeout = Timeout(Duration(15, TimeUnit.SECONDS))
 
-    _twinConnections.get(remoteAddress).map {
-      _twinMap.get(_).map {
-        _.commandPublisher.map {
-          var labelMap: Map[Int, String] = Map[Int, String]()
-
+    _twinConnections.get(remoteAddress).map { twinID =>
+      _twinMap.get(twinID).map { deviceTwin =>
+        deviceTwin.commandPublisher.map { publisher =>
           val future = (_detectorController ? "getDictionary").mapTo[Map[Int, String]]
           try {
             Await.result(future, askTimeout.duration) match {
-              case data: Map[Int, String] => labelMap = data
+              case data: Map[Int, String] => publisher ! SingularCommand(LabelMapMessage(data))
               case e => println("unfortunately")
             }
           } catch {
             case e: Throwable => println("unfortunately")
           }
-
-          _ ! SingularCommand(LabelMapMessage(labelMap))
         }
       }
     }

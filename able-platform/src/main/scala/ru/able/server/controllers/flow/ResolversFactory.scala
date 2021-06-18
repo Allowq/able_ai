@@ -1,6 +1,7 @@
 package ru.able.server.controllers.flow
 
 import akka.stream.Materializer
+import akka.stream.StreamRefMessages.Payload
 import akka.stream.scaladsl.{Sink, Source}
 import ru.able.server.controllers.flow.model.ResolversFactory.{BasicRT, ExtendedRT, FrameSeqRT, ResolverType}
 
@@ -17,14 +18,22 @@ object ResolversFactory {
 
   private class BasicResolver[Evt](implicit mat: Materializer, ec: ExecutionContext) extends BaseResolver[Evt] {
     def process: PartialFunction[Evt, Action] = {
-      case SimpleStreamChunk(x)               => if (x.length > 0) ConsumerAction.ConsumeStreamChunk else ConsumerAction.EndStream
-      case x: SimpleError                     => ConsumerAction.AcceptError
-      case x: SimpleReply                     => ConsumerAction.AcceptSignal
-      case SimpleCommand(CHECK_PING, payload) => ProducerAction.Signal { x: SimpleCommand ⇒ Future(SimpleReply("PONG")) }
-      case x                                  => {
-        println("Unhandled: " + x)
-//        ProducerAction.Signal { _: FrameSeqMessage => Future(SimpleReply("PING_ACCEPTED")) }
-        ConsumerAction.Ignore
+      case SimpleStreamChunk(x) => if (x.length > 0) ConsumerAction.ConsumeStreamChunk else ConsumerAction.EndStream
+      case x: SimpleError => ConsumerAction.AcceptError
+      case SimpleReply(payload) => println(s"Simple reply: $payload"); ConsumerAction.AcceptSignal
+      case cmd: SimpleCommand => processSimpleCommands(cmd)
+      case x => println("Unhandled: " + x); ConsumerAction.Ignore
+    }
+
+    private def processSimpleCommands(command: SimpleCommand): Action = command.cmd match {
+      case ECHO => ProducerAction.Signal {
+        x: SimpleCommand => Future(SimpleReply(command.payload))
+      }
+      case UUID => ProducerAction.Signal {
+        x: SimpleCommand => Future(SimpleReply("1e7c5a66-2d2c-49f9-b3ea-641fbd94bec9"))
+      }
+      case CHECK_PING => ProducerAction.Signal {
+        x: SimpleCommand => Future(SimpleReply("PONG"))
       }
     }
   }

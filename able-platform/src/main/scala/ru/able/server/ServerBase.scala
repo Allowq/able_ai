@@ -74,7 +74,8 @@ final class ServerBase[Cmd, Evt](val interface: String = "127.0.0.1", val port: 
     // TODO: Testing
     Future {
       Thread.sleep(2000)
-      _deviceTwinController.temp(conn.remoteAddress)
+      _deviceTwinController.requestDeviceUUID(conn.remoteAddress)
+//      _deviceTwinController.sendLabelMap(conn.remoteAddress)
     }
   }
 

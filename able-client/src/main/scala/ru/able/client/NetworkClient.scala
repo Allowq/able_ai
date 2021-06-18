@@ -296,11 +296,9 @@ class NetworkClient[Cmd, Evt](hosts: Source[HostEvent, NotUsed],
       )
     case frames: Seq[CameraFrame] =>
       _pool.execute(
-        () =>
-          ask(FrameSeqMessage(
-            _uuid,
-            frames.map(_socketFraneConverter.convert)
-          ).asInstanceOf[Cmd])
+        () => ask(
+          FrameSeqMessage(_uuid, frames.map(_socketFraneConverter.convert)).asInstanceOf[Cmd]
+        )
       )
   }
 }
