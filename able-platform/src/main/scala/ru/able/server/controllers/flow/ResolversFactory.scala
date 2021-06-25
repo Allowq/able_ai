@@ -12,8 +12,12 @@ import ru.able.server.controllers.flow.model.ResolversFactory.{BasicRT, CustomRe
 
 object ResolversFactory {
 
-  abstract class BaseResolver[In] {
+  abstract class BaseResolver[In] extends Actor with ActorLogging {
     def process: PartialFunction[In, Action]
+
+    override def receive: Receive = {
+      case _ => log.warning(s"BaseResolver cannot parse incoming request.")
+    }
   }
 
   def apply[Evt](resolverType: ResolverType)
@@ -22,7 +26,10 @@ object ResolversFactory {
   : BaseResolver[Evt] = {
     resolverType match {
       case BasicRT => new BasicResolver
-      case CustomReplyRT => new CustomReplyResolver(replyProcessor)
+      case CustomReplyRT => {
+        val actor = system.actorOf(Props(new CustomReplyResolver(replyProcessor)))
+        actor.asInstanceOf[BaseResolver[Evt]]
+      }
       case ExtendedRT => new ExtendedResolver
       case FrameSeqRT => new FrameSeqResolver
     }
