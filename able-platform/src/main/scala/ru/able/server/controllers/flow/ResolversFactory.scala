@@ -1,19 +1,31 @@
 package ru.able.server.controllers.flow
 
+import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
 import akka.stream.Materializer
-import akka.stream.StreamRefMessages.Payload
 import akka.stream.scaladsl.{Sink, Source}
-import ru.able.server.controllers.flow.model.ResolversFactory.{BasicRT, ExtendedRT, FrameSeqRT, ResolverType}
 
 import scala.concurrent.{ExecutionContext, Future}
 import ru.able.server.controllers.flow.protocol.MessageProtocol._
 import ru.able.server.controllers.flow.model.{FrameSeqMessage, MessageFormat, SimpleCommand, SimpleError, SimpleReply, SimpleStreamChunk}
 import ru.able.server.controllers.flow.protocol.{Action, ConsumerAction, ProducerAction}
+import ru.able.server.controllers.flow.model.ResolversFactory.{BasicRT, CustomReplyRT, DeviceActivated, DeviceDefinition, ExtendedRT, FrameSeqRT, ResolverState, ResolverType}
 
 object ResolversFactory {
 
   abstract class BaseResolver[In] {
     def process: PartialFunction[In, Action]
+  }
+
+  def apply[Evt](resolverType: ResolverType)
+                (replyProcessor: AnyRef => Action = {_ => ConsumerAction.Ignore})
+                (implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext)
+  : BaseResolver[Evt] = {
+    resolverType match {
+      case BasicRT => new BasicResolver
+      case CustomReplyRT => new CustomReplyResolver(replyProcessor)
+      case ExtendedRT => new ExtendedResolver
+      case FrameSeqRT => new FrameSeqResolver
+    }
   }
 
   private class BasicResolver[Evt](implicit mat: Materializer, ec: ExecutionContext) extends BaseResolver[Evt] {
@@ -30,7 +42,7 @@ object ResolversFactory {
         x: SimpleCommand => Future(SimpleReply(command.payload))
       }
       case UUID => ProducerAction.Signal {
-        x: SimpleCommand => Future(SimpleReply("1e7c5a66-2d2c-49f9-b3ea-641fbd94bec9"))
+        x: SimpleCommand => Future(SimpleReply("ef52e009-9b9c-4dfd-8e98-af33d900d431"))
       }
       case CHECK_PING => ProducerAction.Signal {
         x: SimpleCommand => Future(SimpleReply("PONG"))
@@ -62,15 +74,22 @@ object ResolversFactory {
       case FrameSeqMessage(uuid, socketFrames) =>
         socketFrames.foreach(sf => println(s"${uuid.toString}: ${sf.date.toString}"))
         ConsumerAction.AcceptSignal
-      //      ProducerAction.Signal { x: SimpleCommand => Future(SimpleReply("PING_ACCEPTED")) }
     }
   }
 
-  def apply[Evt](resolverType: ResolverType)(implicit mat: Materializer, ec: ExecutionContext): BaseResolver[Evt] = {
-    resolverType match {
-      case BasicRT => new BasicResolver
-      case ExtendedRT => new ExtendedResolver
-      case FrameSeqRT => new FrameSeqResolver
+  private class CustomReplyResolver[Evt](replyProcessor: String => Action)
+                                        (implicit mat: Materializer, ec: ExecutionContext) extends BaseResolver[Evt] // with Actor with ActorLogging
+  {
+    private var _type: ResolverState = DeviceDefinition
+
+//    override def receive: Receive = {
+//      case DeviceActivated => _type = DeviceActivated
+//      case _ => log.warning(s"CustomReplyResolver cannot parse incoming request.")
+//    }
+
+    override def process: PartialFunction[Evt, Action] = {
+      case SimpleReply(payload) => replyProcessor(payload)
+      case x => println("Unhandled: " + x); ConsumerAction.Ignore
     }
   }
 }

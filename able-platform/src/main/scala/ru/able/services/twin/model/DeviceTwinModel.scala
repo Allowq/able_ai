@@ -3,9 +3,8 @@ package ru.able.services.twin.model
 import java.util.UUID
 
 import akka.actor.ActorRef
-
-import ru.able.server.controllers.flow.model.FlowController.FlowType
-import ru.able.services.session.model.SessionController.SessionID
+import ru.able.server.controllers.flow.model.FlowTypes.FlowType
+import ru.able.server.controllers.session.model.KeeperModel.SessionID
 
 object DeviceTwinController {
 

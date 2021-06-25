@@ -5,27 +5,11 @@ import java.util.UUID
 import akka.Done
 import akka.stream.UniqueKillSwitch
 import akka.stream.scaladsl.{RunnableGraph, Tcp}
+import ru.able.server.controllers.session.model.KeeperModel.SessionID
 
 import scala.concurrent.Future
 
 object SessionController {
-
-  case class SessionID(uuid: UUID)
-
-  sealed trait BaseDeviceState
-  case object Foundation extends BaseDeviceState
-  case object Definition extends BaseDeviceState
-  case object Initialization extends BaseDeviceState
-  case object Provision extends BaseDeviceState
-  case object Exploitation extends BaseDeviceState
-
-  trait BaseSession {
-    def state: BaseDeviceState
-    def deviceID: UUID
-  }
-
-  case class DeviceSession(state: BaseDeviceState,
-                           deviceID: UUID) extends BaseSession
 
   sealed trait TwinControllerRequest
   case class RegisterNewDeviceTwin(conn: Tcp.IncomingConnection) extends TwinControllerRequest

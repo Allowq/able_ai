@@ -16,7 +16,7 @@ import org.platanios.tensorflow.api.{Shape, UINT8}
 import org.platanios.tensorflow.api.Tensor
 import ru.able.utils.settings.PropertyBasedSettings
 
-final class DetectorController private (private val _detectorModel: DetectorModel)
+final class DetectorController private (_detectorModel: DetectorModel)
 {
   private lazy val _config = ConfigFactory.defaultApplication().resolve().getConfig("sourceDescription")
 

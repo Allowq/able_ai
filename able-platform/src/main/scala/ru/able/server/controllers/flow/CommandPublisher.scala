@@ -41,7 +41,7 @@ class CommandActorPublisher[Cmd] extends Actor with Stash {
 object SourceActorPublisher {
   private def propsActorPublisher: Props = Props(new CommandActorPublisher())
 
-  def apply[Cmd]()(implicit system: ActorSystem): (ActorRef, SourceActorPublisher[Cmd]) = {
+  def apply[Cmd](implicit system: ActorSystem): (ActorRef, SourceActorPublisher[Cmd]) = {
     val actor = system.actorOf(SourceActorPublisher.propsActorPublisher)
     (actor, new SourceActorPublisher(actor))
   }

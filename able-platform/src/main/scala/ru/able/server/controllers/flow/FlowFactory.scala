@@ -3,30 +3,35 @@ package ru.able.server.controllers.flow
 import akka.{Done, NotUsed}
 import akka.actor.{Actor, ActorRef, ActorSystem}
 import akka.stream.{BidiShape, FlowShape, RestartSettings}
-import akka.stream.scaladsl.{BidiFlow, Flow, GraphDSL, Keep, Merge, RestartFlow, Sink, Source}
+import akka.stream.scaladsl.{BidiFlow, Flow, GraphDSL, Keep, Merge, RestartFlow, Sink}
 import akka.util.ByteString
 import com.typesafe.scalalogging.LazyLogging
 import ru.able.server.controllers.flow.ResolversFactory.BaseResolver
-import ru.able.server.controllers.flow.model.FlowController.{BasicFT, DetectionFT, FlowType, ManagedDetectionFT}
-import ru.able.server.controllers.flow.model.ResolversFactory.{BasicRT, FrameSeqRT}
-import ru.able.server.controllers.flow.protocol.{Command, Event, MessageProtocol, ProducerAction, SingularCommand, SingularEvent, StreamEvent, StreamingCommand}
+import ru.able.server.controllers.flow.model.FlowTypes.{BasicFT, CustomReplyFT, DetectionFT, FlowType, ManagedDetectionFT}
+import ru.able.server.controllers.flow.model.ResolversFactory.{BasicRT, CustomReplyRT, FrameSeqRT}
+import ru.able.server.controllers.flow.protocol.{Action, Command, ConsumerAction, Event, MessageProtocol, ProducerAction, SingularCommand, SingularEvent, StreamEvent, StreamingCommand}
 import ru.able.server.controllers.flow.stages.{ConsumerStage, ProducerStage}
 import ru.able.services.detector.DetectorController
 
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 
-class FlowController[Cmd, Evt](private val _detectorController: ActorRef)
-                              (implicit system: ActorSystem, ec: ExecutionContext) extends LazyLogging
+final class FlowFactory[Cmd, Evt](implicit system: ActorSystem, ec: ExecutionContext) extends LazyLogging
 {
-  def getFlowByType(flowType: FlowType): (ActorRef, Flow[ByteString, ByteString, Future[Done]]) = flowType match {
+  private val _detectorController: ActorRef = DetectorController()
+
+  def flow(flowType: FlowType)
+          (replyProcessor: AnyRef => Action = {_ => ConsumerAction.Ignore})
+  : (ActorRef, Flow[ByteString, ByteString, Future[Done]]) = flowType match
+  {
     case BasicFT => getBasicFlow
+    case CustomReplyFT => getCustomReplyFlow(replyProcessor)
     case DetectionFT => getDetectionFlow
     case ManagedDetectionFT => getManagedDetectionFlow
   }
 
-  private [server] def getBasicFlow: (ActorRef, Flow[ByteString, ByteString, Future[Done]]) = {
-    val (publisher, source) = SourceActorPublisher.apply[Cmd]()(system)
+  private def getBasicFlow: (ActorRef, Flow[ByteString, ByteString, Future[Done]]) = {
+    val (publisher, source) = SourceActorPublisher.apply[Cmd](system)
 
     val restartingFlow = RestartFlow.withBackoff[ByteString, ByteString](
       RestartSettings(FiniteDuration(0, "seconds"), FiniteDuration(0, "seconds"), 1)
@@ -36,7 +41,7 @@ class FlowController[Cmd, Evt](private val _detectorController: ActorRef)
 
         val pipeline = b.add(
           getConsumeProduceBidiFlow(
-            ResolversFactory(BasicRT),
+            ResolversFactory(BasicRT)(),
             1,
             true
           ).atop[ByteString, ByteString, NotUsed](MessageProtocol())
@@ -52,7 +57,34 @@ class FlowController[Cmd, Evt](private val _detectorController: ActorRef)
     (publisher, restartingFlow)
   }
 
-  private [server] def getDetectionFlow: (ActorRef, Flow[ByteString, ByteString, Future[Done]]) = {
+  private def getCustomReplyFlow(replyProcessor: AnyRef => Action): (ActorRef, Flow[ByteString, ByteString, Future[Done]]) = {
+    val (publisher, source) = SourceActorPublisher.apply[Cmd](system)
+
+    val restartingFlow = RestartFlow.withBackoff[ByteString, ByteString](
+      RestartSettings(FiniteDuration(0, "seconds"), FiniteDuration(0, "seconds"), 1)
+    ){ () =>
+      Flow.fromGraph(GraphDSL.create() { implicit b =>
+        import akka.stream.scaladsl.GraphDSL.Implicits._
+
+        val pipeline = b.add(
+          getConsumeProduceBidiFlow(
+            ResolversFactory(CustomReplyRT)(replyProcessor),
+            1,
+            true
+          ).atop[ByteString, ByteString, NotUsed](MessageProtocol())
+        )
+
+        source ~> pipeline.in1
+        pipeline.out2 ~> Sink.ignore
+
+        FlowShape(pipeline.in2, pipeline.out1)
+      })
+    }.watchTermination()(Keep.right)
+
+    (publisher, restartingFlow)
+  }
+
+  private def getDetectionFlow: (ActorRef, Flow[ByteString, ByteString, Future[Done]]) = {
     val detectionFlow = DetectorController.getDetectionFlow[Cmd, Evt](_detectorController)
 
     val flow = Flow.fromGraph(GraphDSL.create() { implicit b =>
@@ -60,7 +92,7 @@ class FlowController[Cmd, Evt](private val _detectorController: ActorRef)
 
       val pipeline = b.add(
         getConsumeProduceBidiFlow(
-          ResolversFactory(FrameSeqRT),
+          ResolversFactory(FrameSeqRT)(),
           1,
           true
         ).atop[ByteString, ByteString, NotUsed](MessageProtocol())
@@ -75,17 +107,17 @@ class FlowController[Cmd, Evt](private val _detectorController: ActorRef)
     (Actor.noSender, flow)
   }
 
-  private [server] def getManagedDetectionFlow: (ActorRef, Flow[ByteString, ByteString, Future[Done]]) =
+  private def getManagedDetectionFlow: (ActorRef, Flow[ByteString, ByteString, Future[Done]]) =
   {
     val detectionFlow = DetectorController.getDetectionFlow[Cmd, Evt](_detectorController)
-    val (publisher, source) = SourceActorPublisher.apply[Cmd]()(system)
+    val (publisher, source) = SourceActorPublisher.apply[Cmd](system)
 
     val flow = Flow.fromGraph(GraphDSL.create() { implicit b =>
       import akka.stream.scaladsl.GraphDSL.Implicits._
 
       val pipeline = b.add(
         getConsumeProduceBidiFlow(
-          ResolversFactory(FrameSeqRT),
+          ResolversFactory(FrameSeqRT)(),
           1,
           true
         ).atop[ByteString, ByteString, NotUsed](MessageProtocol())
@@ -104,10 +136,10 @@ class FlowController[Cmd, Evt](private val _detectorController: ActorRef)
     (publisher, flow)
   }
 
-  private [server] def getConsumeProduceBidiFlow(resolver: BaseResolver[Evt],
-                                                  producerParallism: Int,
-                                                  shouldReact: Boolean): BidiFlow[Command[Cmd], Cmd, Evt, Event[Evt], Any] =
-  {
+  private def getConsumeProduceBidiFlow(resolver: BaseResolver[Evt],
+                                        producerParallism: Int,
+                                        shouldReact: Boolean)
+  : BidiFlow[Command[Cmd], Cmd, Evt, Event[Evt], Any] = {
     val consumerStage = new ConsumerStage[Evt, Cmd](resolver)
     val producerStage = new ProducerStage[Evt, Cmd]()
 

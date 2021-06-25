@@ -5,6 +5,7 @@ import java.nio.ByteBuffer
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
 import akka.stream.FlowShape
 import akka.stream.scaladsl.{Flow, GraphDSL}
+import com.typesafe.scalalogging.LazyLogging
 import org.bytedeco.javacpp.opencv_core.Mat
 import org.bytedeco.javacpp.opencv_imgproc.{COLOR_BGR2RGB, cvtColor}
 import org.platanios.tensorflow.api.{Tensor, _}
@@ -33,7 +34,7 @@ object DetectorController {
   }
 }
 
-class DetectorController private (private val _detectorModel: DetectorModel) extends Actor with ActorLogging
+class DetectorController private (private val _detectorModel: DetectorModel) extends Actor with LazyLogging
 {
   def this(folderPath: Option[String] = None) {
     this(

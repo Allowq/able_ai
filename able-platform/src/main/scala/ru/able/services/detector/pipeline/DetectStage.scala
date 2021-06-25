@@ -34,6 +34,7 @@ class DetectStage(detectorController: ActorRef) extends GraphStage[FlowShape[Sig
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
 
     override def preStart(): Unit = {
+      // TODO: Upgrade it to concurrent.Try
       val future = (detectorController ? "getDictionary").mapTo[Map[Int, String]]
       try {
         Await.result(future, askTimeout.duration) match {
