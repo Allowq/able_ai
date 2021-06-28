@@ -8,24 +8,23 @@ import scala.concurrent.{Await, ExecutionContext, Future, TimeoutException}
 import scala.concurrent.duration.Duration
 
 object Helpers {
-  // timeout: TimeUnit.MILLISECONDS
-  def runWithTimeout[T](timeout: Long)
+  def runWithTimeout[T](timeoutMILLS: Long)
                        (f: => T)
                        (implicit ec: ExecutionContext)
   : Option[T] =
   {
     try {
-      Some(Await.result(Future(f), Duration(timeout, TimeUnit.MILLISECONDS)))
+      Some(Await.result(Future(f), Duration(timeoutMILLS, TimeUnit.MILLISECONDS)))
     } catch {
       case _: TimeoutException => None
     }
   }
 
-  def runAfterDelay[T](delay: Long)
+  def runAfterDelay[T](delayMILLS: Long)
                       (f: => T)
                       (implicit system: ActorSystem, ec: ExecutionContext)
   : Cancellable =
   {
-    system.scheduler.scheduleOnce(Duration(delay, TimeUnit.MILLISECONDS))(f)(ec)
+    system.scheduler.scheduleOnce(Duration(delayMILLS, TimeUnit.MILLISECONDS))(f)(ec)
   }
 }

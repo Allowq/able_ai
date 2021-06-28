@@ -1,13 +1,12 @@
 package ru.able.services.session.model
 
-import java.util.UUID
-
 import akka.Done
 import akka.stream.UniqueKillSwitch
 import akka.stream.scaladsl.{RunnableGraph, Tcp}
-import ru.able.server.controllers.session.model.KeeperModel.SessionID
 
 import scala.concurrent.Future
+
+import ru.able.server.controllers.session.model.KeeperModel.SessionID
 
 object SessionController {
 

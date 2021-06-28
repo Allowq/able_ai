@@ -8,28 +8,30 @@ import akka.stream.scaladsl.Tcp
 
 object KeeperModel {
 
-  case class NewConnection(conn: Tcp.IncomingConnection)
-  case class ResetConnection(rAddr: InetSocketAddress)
-  case class ResolveConnection(connection: Tcp.IncomingConnection, sessionID: SessionID)
-  case class ResolveDeviceID(connection: Tcp.IncomingConnection, deviceID: DeviceID)
+  sealed trait SessionKeeperRequest
+  case class NewConnection(conn: Tcp.IncomingConnection) extends SessionKeeperRequest
+  case class ResetConnection(rAddr: InetSocketAddress) extends SessionKeeperRequest
+  case class ResolveDeviceID(rAddr: InetSocketAddress, deviceID: DeviceID) extends SessionKeeperRequest
+  case class CheckSessionState(rAddr: InetSocketAddress) extends SessionKeeperRequest
 
-  sealed trait BaseDeviceState
-  case object Foundation extends BaseDeviceState
-  case object Definition extends BaseDeviceState
-  case object Initialization extends BaseDeviceState
-  case object Provision extends BaseDeviceState
-  case object Exploitation extends BaseDeviceState
+  case class ResolveConnection(connection: Tcp.IncomingConnection, sessionID: SessionID)
+
+  sealed trait SessionState
+  case object InitSession extends SessionState
+  case object CheckSession extends SessionState
+  case object ActiveSession extends SessionState
+  case object ExpiredSession extends SessionState
+
+  case class DeviceID(uuid: Option[UUID])
 
   trait BaseSession {
-    def state: BaseDeviceState
+    def state: SessionState
     def timestamp: Timestamp
   }
   case class SessionData(deviceID: DeviceID,
-                         state: BaseDeviceState,
+                         state: SessionState,
                          timestamp: Timestamp) extends BaseSession
 
   case class SessionID(uuid: UUID)
   case class SessionObj(id: SessionID, data: SessionData)
-
-  case class DeviceID(uuid: Option[UUID])
 }

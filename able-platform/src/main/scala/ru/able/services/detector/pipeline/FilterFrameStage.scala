@@ -29,9 +29,6 @@ class FilterFrameStage[Evt] extends GraphStage[FlowShape[Evt, SignedFrame]] with
       pull(in)
     }
 
-    override def postStop(): Unit = {
-    }
-
     setHandler(in, new InHandler {
       override def onPush(): Unit = {
         Try {

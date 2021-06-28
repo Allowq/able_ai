@@ -2,7 +2,7 @@ package ru.able.services.detector
 
 import java.nio.ByteBuffer
 
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
+import akka.actor.{Actor, ActorContext, ActorRef, Props}
 import akka.stream.FlowShape
 import akka.stream.scaladsl.{Flow, GraphDSL}
 import com.typesafe.scalalogging.LazyLogging
@@ -15,8 +15,8 @@ import ru.able.services.detector.pipeline.{DetectStage, FilterFrameStage, ShowSi
 
 object DetectorController {
 
-  def apply()(implicit system: ActorSystem): ActorRef =
-    system.actorOf( Props(new DetectorController()), "DetectorControllerActor")
+  def apply()(implicit context: ActorContext): ActorRef =
+    context.actorOf( Props(new DetectorController()), "DetectorControllerActor")
 
   def getDetectionFlow[Cmd, Evt](detectController: ActorRef): Flow[Event[Evt], Command[Cmd], Any] = {
     Flow.fromGraph[Event[Evt], Command[Cmd], Any] {
@@ -43,12 +43,9 @@ class DetectorController private (private val _detectorModel: DetectorModel) ext
   }
 
   override def receive: Receive = {
-    case image: Mat =>
-      sender ! detect(matToTensor(image))
-    case index: Int =>
-      sender ! _detectorModel.labelMap.getOrElse(index, "unknown")
-    case "getDictionary" =>
-      sender ! _detectorModel.labelMap
+    case image: Mat => sender ! detect(matToTensor(image))
+    case index: Int => sender ! _detectorModel.labelMap.getOrElse(index, "unknown")
+    case "getDictionary" => sender ! _detectorModel.labelMap
   }
 
   // run the object detection model on an image

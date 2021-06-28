@@ -20,9 +20,8 @@ class ConsumerStage[Evt, Cmd](resolver: BaseResolver[Evt])
 
     private var chunkSource: SubSourceOutlet[Evt] = _
     private def chunkSubStreamStarted = chunkSource != null
-    private def idle = this
 
-    def setInitialHandlers(): Unit = setHandlers(eventIn, signalOut, idle)
+    def setInitialHandlers(): Unit = setHandlers(eventIn, signalOut, this)
 
     /*
     *
@@ -113,7 +112,7 @@ class ConsumerStage[Evt, Cmd](resolver: BaseResolver[Evt])
         case StartStream                               => startStream(None)
         case ConsumeStreamChunk                        => startStream(Some(evt))
         case ConsumeChunkAndEndStream                  => push(signalOut, StreamEvent(Source.single(evt)))
-        case Ignore                                    => push(signalOut, SingularEvent(evt))
+        case Ignore                                    => pull(eventIn)
       }
     }
 
