@@ -11,13 +11,15 @@ import ru.able.server.model.SocketFrame
 import ru.able.util.ObjectInputStreamWithCustomClassLoader
 
 object MessageProtocol {
+
+  implicit val byteOrder = java.nio.ByteOrder.BIG_ENDIAN
+
   val SOCKET_FRAMES = 1
   val TOTAL_CHUNK_SIZE = 2
   val ECHO = 3
   val UUID = 4
+  val LABEL_MAP = 5
   val CHECK_PING = 99
-
-  implicit val byteOrder = java.nio.ByteOrder.BIG_ENDIAN
 
   val maximumMessageLength: Int = 4 << 20
 
@@ -27,27 +29,22 @@ object MessageProtocol {
       .atop(Framing.simpleFramingProtocol(maximumMessageLength))
   }
 
-  def decoderFlow: Flow[ByteString, ByteString, NotUsed] = Framing.simpleFramingProtocolDecoder(maximumMessageLength)
-  def deserializeFlow: Flow[ByteString, MessageFormat, NotUsed] = Flow.fromFunction(deserialize)
-  def serializeFlow: Flow[MessageFormat, ByteString, NotUsed] = Flow.fromFunction(serialize)
-  def encoderFlow: Flow[ByteString, ByteString, NotUsed] = Framing.simpleFramingProtocolEncoder(maximumMessageLength)
+  private def decoderFlow: Flow[ByteString, ByteString, NotUsed] = Framing.simpleFramingProtocolDecoder(maximumMessageLength)
+  private def deserializeFlow: Flow[ByteString, MessageFormat, NotUsed] = Flow.fromFunction(deserialize)
+  private def serializeFlow: Flow[MessageFormat, ByteString, NotUsed] = Flow.fromFunction(serialize)
+  private def encoderFlow: Flow[ByteString, ByteString, NotUsed] = Framing.simpleFramingProtocolEncoder(maximumMessageLength)
 
   private def deserialize[Cmd](bs: ByteString): Cmd = {
     val iter = bs.iterator
     val command = iter.getInt match {
-      case 1 =>
-        SimpleCommand(iter.getInt, new String(iter.toByteString.toArray))
-      case 2 =>
-        SimpleReply(new String(iter.toByteString.toArray))
-      case 3 =>
-        SimpleStreamChunk(new String(iter.toByteString.toArray))
-      case 4 =>
-        SimpleError(new String(iter.toByteString.toArray))
-      case 10 =>
-        FrameSeqMessage(
-          new UUID(iter.getLong, iter.getLong),
-          deserializeObject[Seq[SocketFrame]](iter.toByteString)
-        )
+      case 1 => SimpleCommand(iter.getInt, new String(iter.toByteString.toArray))
+      case 2 => SimpleReply(new String(iter.toByteString.toArray))
+      case 3 => SimpleStreamChunk(new String(iter.toByteString.toArray))
+      case 4 => SimpleError(new String(iter.toByteString.toArray))
+      case 10 => FrameSeqMessage(
+        new UUID(iter.getLong, iter.getLong),
+        deserializeObject[Seq[SocketFrame]](iter.toByteString)
+      )
     }
 
     command.asInstanceOf[Cmd]

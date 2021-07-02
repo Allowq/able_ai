@@ -8,12 +8,14 @@ import akka.stream.{BidiShape, FlowShape, Materializer, RestartSettings}
 import akka.stream.scaladsl.{BidiFlow, Flow, GraphDSL, Keep, Merge, RestartFlow, Sink}
 import akka.util.ByteString
 import com.typesafe.scalalogging.LazyLogging
+
 import ru.able.server.controllers.flow.ResolversFactory.BaseResolver
 import ru.able.server.controllers.flow.model.FlowTypes.{BasicFT, DetectionFT, ExtendedFT, FlowType, ManagedDetectionFT}
 import ru.able.server.controllers.flow.model.ResolversFactory.{BasicRT, ExtendedRT, FrameSeqRT}
 import ru.able.server.controllers.flow.protocol.{Command, Event, MessageProtocol, ProducerAction, SingularCommand, SingularEvent, StreamEvent, StreamingCommand}
-import ru.able.server.controllers.flow.stages.{CheckoutStage, ConsumerStage, ProducerStage, SourceActorPublisher}
+import ru.able.server.controllers.flow.stages.{CheckoutStage, ConsumerStage, ProducerStage, SourceFromActorStage}
 import ru.able.services.detector.DetectorController
+import ru.able.services.detector.pipeline.{DetectorStage, ShowSignedFrameStage}
 
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
@@ -21,7 +23,7 @@ import scala.concurrent.{ExecutionContext, Future}
 final class FlowFactory[Cmd, Evt](implicit context: ActorContext, mat: Materializer, ec: ExecutionContext) extends LazyLogging
 {
   def flow(flowType: FlowType)
-          (rAddr: InetSocketAddress = new InetSocketAddress(1337), sessionKeeperActor: ActorRef = Actor.noSender)
+          (rAddr: Option[InetSocketAddress], sessionKeeperActor: ActorRef = Actor.noSender)
   : (ActorRef, Flow[ByteString, ByteString, Future[Done]]) = flowType match
   {
     case BasicFT => getBasicFlow
@@ -31,9 +33,9 @@ final class FlowFactory[Cmd, Evt](implicit context: ActorContext, mat: Materiali
   }
 
   private val _detectorController: ActorRef = DetectorController()
-  private val _producerParallism = 1
+  private val _producerParallelism = 1
 
-  private val functionApply = Flow[(Event[Evt], ProducerAction[Evt, Cmd])].mapAsync[Command[Cmd]](_producerParallism) {
+  private val functionApply = Flow[(Event[Evt], ProducerAction[Evt, Cmd])].mapAsync[Command[Cmd]](_producerParallelism) {
     case (SingularEvent(evt), x: ProducerAction.Signal[Evt, Cmd])        => x.f(evt).map(SingularCommand[Cmd])
     case (SingularEvent(evt), x: ProducerAction.ProduceStream[Evt, Cmd]) => x.f(evt).map(StreamingCommand[Cmd])
     case (StreamEvent(evt), x: ProducerAction.ConsumeStream[Evt, Cmd])   => x.f(evt).map(SingularCommand[Cmd])
@@ -41,7 +43,7 @@ final class FlowFactory[Cmd, Evt](implicit context: ActorContext, mat: Materiali
   }
 
   private def getBasicFlow: (ActorRef, Flow[ByteString, ByteString, Future[Done]]) = {
-    val (publisher, source) = SourceActorPublisher.apply[Cmd](context)
+    val (actionPublisher, source) = SourceFromActorStage[Cmd](None)
 
     val restartingFlow = RestartFlow.withBackoff[ByteString, ByteString](
       RestartSettings(FiniteDuration(0, "seconds"), FiniteDuration(0, "seconds"), 1)
@@ -52,7 +54,6 @@ final class FlowFactory[Cmd, Evt](implicit context: ActorContext, mat: Materiali
         val pipeline = b.add(
           getConsumeProduceBidiFlow(
             ResolversFactory(BasicRT),
-            1,
             true
           ).atop[ByteString, ByteString, NotUsed](MessageProtocol())
         )
@@ -64,7 +65,7 @@ final class FlowFactory[Cmd, Evt](implicit context: ActorContext, mat: Materiali
       })
     }.watchTermination()(Keep.right)
 
-    (publisher, restartingFlow)
+    (actionPublisher, restartingFlow)
   }
 
   private def getDetectionFlow: (ActorRef, Flow[ByteString, ByteString, Future[Done]]) = {
@@ -76,7 +77,6 @@ final class FlowFactory[Cmd, Evt](implicit context: ActorContext, mat: Materiali
       val pipeline = b.add(
         getConsumeProduceBidiFlow(
           ResolversFactory(FrameSeqRT),
-          1,
           true
         ).atop[ByteString, ByteString, NotUsed](MessageProtocol())
       )
@@ -93,7 +93,7 @@ final class FlowFactory[Cmd, Evt](implicit context: ActorContext, mat: Materiali
   private def getManagedDetectionFlow: (ActorRef, Flow[ByteString, ByteString, Future[Done]]) =
   {
     val detectionFlow = DetectorController.getDetectionFlow[Cmd, Evt](_detectorController)
-    val (publisher, source) = SourceActorPublisher.apply[Cmd](context)
+    val (actionPublisher, source) = SourceFromActorStage[Cmd](None)
 
     val flow = Flow.fromGraph(GraphDSL.create() { implicit b =>
       import akka.stream.scaladsl.GraphDSL.Implicits._
@@ -101,7 +101,6 @@ final class FlowFactory[Cmd, Evt](implicit context: ActorContext, mat: Materiali
       val pipeline = b.add(
         getConsumeProduceBidiFlow(
           ResolversFactory(FrameSeqRT),
-          1,
           true
         ).atop[ByteString, ByteString, NotUsed](MessageProtocol())
       )
@@ -116,12 +115,10 @@ final class FlowFactory[Cmd, Evt](implicit context: ActorContext, mat: Materiali
       FlowShape(pipeline.in2, pipeline.out1)
     }).watchTermination()(Keep.right)
 
-    (publisher, flow)
+    (actionPublisher, flow)
   }
 
-  private def getConsumeProduceBidiFlow(resolver: BaseResolver[Evt],
-                                        producerParallism: Int,
-                                        shouldReact: Boolean)
+  private def getConsumeProduceBidiFlow(resolver: BaseResolver[Evt], shouldReact: Boolean)
   : BidiFlow[Command[Cmd], Cmd, Evt, Event[Evt], Any] =
   {
     val consumerStage = new ConsumerStage[Evt, Cmd](resolver)
@@ -153,11 +150,10 @@ final class FlowFactory[Cmd, Evt](implicit context: ActorContext, mat: Materiali
     }
   }
 
-  private def getExtendedFlow(rAddr: InetSocketAddress, sessionKeeperActor: ActorRef)
+  private def getExtendedFlow(rAddr: Option[InetSocketAddress], sessionKeeperActor: ActorRef)
   : (ActorRef, Flow[ByteString, ByteString, Future[Done]]) =
   {
-    val (publisher, source) = SourceActorPublisher.apply[Cmd](context)
-    val detectionFlow = DetectorController.getDetectionFlow[Cmd, Evt](_detectorController)
+    val (actionPublisher, source) = SourceFromActorStage[Cmd](rAddr)
     val restartingFlow = RestartFlow.withBackoff[ByteString, ByteString](
       RestartSettings(FiniteDuration(0, "seconds"), FiniteDuration(0, "seconds"), 1)
     ){ () =>
@@ -165,29 +161,31 @@ final class FlowFactory[Cmd, Evt](implicit context: ActorContext, mat: Materiali
         import akka.stream.scaladsl.GraphDSL.Implicits._
 
         val pipeline = b.add(
-          getBasisBidiFlow(ResolversFactory(ExtendedRT), 1)(rAddr, sessionKeeperActor)
+          getBasisBidiFlow(ResolversFactory(ExtendedRT))(rAddr, sessionKeeperActor)
             .atop[ByteString, ByteString, NotUsed](MessageProtocol())
         )
-        val detector = b.add(detectionFlow)
-        val commandInMerge = b.add(Merge[Command[Cmd]](2, true))
+        val detector = b.add(new DetectorStage(_detectorController).async)
+        val frameShower = b.add(new ShowSignedFrameStage)
+        val commandInMerge = b.add(Merge[Command[Cmd]](3, true))
 
-        pipeline.out2 ~> detector
-                         detector ~> commandInMerge.in(0)
-                           source ~> commandInMerge.in(1)
-                                     commandInMerge.out ~> pipeline.in1
+        pipeline.out2 ~> detector.in
+                         detector.out0 ~> frameShower ~> commandInMerge.in(0)
+                         detector.out1 ~>                commandInMerge.in(1)
+                                               source ~> commandInMerge.in(2)
+                                                         commandInMerge.out ~> pipeline.in1
 
         FlowShape(pipeline.in2, pipeline.out1)
       })
     }.watchTermination()(Keep.right)
 
-    (publisher, restartingFlow)
+    (actionPublisher, restartingFlow)
   }
 
-  private def getBasisBidiFlow(resolver: BaseResolver[Evt], producerParallism: Int)
-                                             (rAddr: InetSocketAddress, stageControlActor: ActorRef)
+  private def getBasisBidiFlow(resolver: BaseResolver[Evt])
+                              (rAddr: Option[InetSocketAddress], stageControlActor: ActorRef)
   : BidiFlow[Command[Cmd], Cmd, Evt, Event[Evt], Any] =
   {
-    val checkoutStage = new CheckoutStage[Evt](rAddr, stageControlActor)
+    val (_, checkoutStage) = CheckoutStage[Evt, Cmd](rAddr, stageControlActor)
     val consumerStage = new ConsumerStage[Evt, Cmd](resolver)
     val producerStage = new ProducerStage[Evt, Cmd]()
 

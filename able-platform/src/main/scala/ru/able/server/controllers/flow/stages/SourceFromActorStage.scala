@@ -1,6 +1,8 @@
 package ru.able.server.controllers.flow.stages
 
-import akka.actor.{ActorContext, ActorRef, ActorSystem, Props}
+import java.net.InetSocketAddress
+
+import akka.actor.{ActorContext, ActorRef, Props}
 import akka.stream.{Attributes, Outlet, SourceShape}
 import akka.stream.stage.GraphStageLogic.StageActor
 import akka.stream.stage.{GraphStage, GraphStageLogic, OutHandler}
@@ -11,16 +13,24 @@ import ru.able.server.controllers.flow.protocol.Command
 
 import scala.collection.immutable.Queue
 
-object SourceActorPublisher {
-  private def propsActorPublisher: Props = Props(new CommandActorPublisher())
+object SourceFromActorStage {
 
-  def apply[Cmd](implicit context: ActorContext): (ActorRef, SourceActorPublisher[Cmd]) = {
-    val actor = context.actorOf(SourceActorPublisher.propsActorPublisher)
-    (actor, new SourceActorPublisher(actor))
+  def apply[Cmd](rAddrOpt: Option[InetSocketAddress])(implicit context: ActorContext)
+  : (ActorRef, SourceFromActorStage[Cmd]) =
+  {
+    val actor = rAddrOpt match {
+      case Some(rAddr) => {
+        val actorName = rAddr.toString.replaceAll("[/]", "_")
+        context.actorOf(CommandActorPublisher.props, s"SourceStagePublisher$actorName")
+      }
+      case None => context.actorOf(CommandActorPublisher.props)
+    }
+
+    (actor, new SourceFromActorStage(actor))
   }
 }
 
-class SourceActorPublisher[Cmd] private (actorPublisher: ActorRef) extends GraphStage[SourceShape[Command[Cmd]]] with LazyLogging {
+class SourceFromActorStage[Cmd] private (actorPublisher: ActorRef) extends GraphStage[SourceShape[Command[Cmd]]] with LazyLogging {
   private val out: Outlet[Command[Cmd]] = Outlet("CommandPublisher.out")
   override def shape: SourceShape[Command[Cmd]] = SourceShape(out)
 

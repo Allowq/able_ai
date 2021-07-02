@@ -1,6 +1,6 @@
 package ru.able.server.controllers.flow
 
-import akka.actor.{ActorContext, ActorSystem}
+import akka.actor.ActorContext
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 
@@ -37,6 +37,8 @@ object ResolversFactory {
           .runWith(Sink.fold[Int, MessageFormat](0) { (b, a) => b + a.payload.asInstanceOf[String].length })
           .map(x ⇒ SimpleReply(x.toString))
       }
+      case LABEL_MAP => ConsumerAction.AcceptSignal
+      case _ => ConsumerAction.Ignore
     }
   }
 

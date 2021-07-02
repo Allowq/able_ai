@@ -30,9 +30,7 @@ class ConsumerStage[Evt, Cmd](resolver: BaseResolver[Evt])
     * */
 
     val pullThroughHandler = new OutHandler {
-      override def onPull() = {
-        pull(eventIn)
-      }
+      override def onPull(): Unit = pull(eventIn)
     }
 
     val substreamHandler = new InHandler with OutHandler {
@@ -64,8 +62,7 @@ class ConsumerStage[Evt, Cmd](resolver: BaseResolver[Evt])
 
       override def onPull(): Unit = {
         // TODO: Recheck internal flow; checking should be obsolete
-        if (!hasBeenPulled(eventIn))
-          pull(eventIn)
+        if (!hasBeenPulled(eventIn)) pull(eventIn)
       }
 
       override def onUpstreamFinish(): Unit = {
@@ -117,9 +114,7 @@ class ConsumerStage[Evt, Cmd](resolver: BaseResolver[Evt])
     }
 
     override def onPull(): Unit = {
-      if (!chunkSubStreamStarted && !hasBeenPulled(eventIn)) {
-        pull(eventIn)
-      }
+      if (!chunkSubStreamStarted && !hasBeenPulled(eventIn)) pull(eventIn)
     }
 
     setHandler(actionOut, this)

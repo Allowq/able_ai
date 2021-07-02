@@ -4,14 +4,15 @@ import java.nio.ByteBuffer
 
 import akka.actor.{Actor, ActorContext, ActorRef, Props}
 import akka.stream.FlowShape
-import akka.stream.scaladsl.{Flow, GraphDSL}
+import akka.stream.scaladsl.{Flow, GraphDSL, Sink}
 import com.typesafe.scalalogging.LazyLogging
 import org.bytedeco.javacpp.opencv_core.Mat
 import org.bytedeco.javacpp.opencv_imgproc.{COLOR_BGR2RGB, cvtColor}
 import org.platanios.tensorflow.api.{Tensor, _}
+
 import ru.able.server.controllers.flow.protocol.{Command, Event}
 import ru.able.services.detector.model.{DetectionOutput, DetectorModel, DetectorViaFileDescription}
-import ru.able.services.detector.pipeline.{DetectStage, FilterFrameStage, ShowSignedFrameStage}
+import ru.able.services.detector.pipeline.{DetectorStage, ShowSignedFrameStage}
 
 object DetectorController {
 
@@ -23,10 +24,11 @@ object DetectorController {
       GraphDSL.create() { implicit b =>
         import GraphDSL.Implicits._
 
-        val pipelineIn = b.add(new FilterFrameStage[Event[Evt]])
+        val pipelineIn = b.add(new DetectorStage(detectController).async)
         val pipelineOut = b.add(new ShowSignedFrameStage[Command[Cmd]])
 
-        pipelineIn ~> b.add(new DetectStage(detectController).async) ~> pipelineOut
+        pipelineIn.out0 ~> pipelineOut
+        pipelineIn.out1 ~> Sink.ignore
 
         FlowShape(pipelineIn.in, pipelineOut.out)
       }

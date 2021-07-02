@@ -48,28 +48,30 @@ final class Gateway(_sessionKeeperActor: ActorRef) extends Actor with ActorLoggi
   }
 
   private def runBasicGateway(sessionID: SessionID, connection: Tcp.IncomingConnection): Unit = {
-    val (publisher, workFlow) = _flowFactory.flow(BasicFT)()
+    val (actionPublisher, workFlow) = _flowFactory.flow(BasicFT)(None)
     val killSwitch = runGateway(sessionID, connection, workFlow)
 
-    _gateways.update(sessionID, GatewayObj(connection, BasicFT, publisher, killSwitch))
+    _gateways.update(sessionID, GatewayObj(connection, BasicFT, actionPublisher, killSwitch))
   }
 
   private def runCustomGateway(sessionID: SessionID,
                                connection: Tcp.IncomingConnection,
                                requester: ActorRef)
-  : Unit = {
-    val (publisher, workFlow) = _flowFactory.flow(ExtendedFT)(connection.remoteAddress, _sessionKeeperActor)
+  : Unit =
+  {
+    val (actionPublisher, workFlow) = _flowFactory.flow(ExtendedFT)(Some(connection.remoteAddress), _sessionKeeperActor)
     val killSwitch = runGateway(sessionID, connection, workFlow)
 
-    _gateways.update(sessionID, GatewayObj(connection, ExtendedFT, publisher, killSwitch))
+    _gateways.update(sessionID, GatewayObj(connection, ExtendedFT, actionPublisher, killSwitch))
 
-    requester ! GatewayRouted(publisher)
+    requester ! GatewayRouted(actionPublisher)
   }
 
   private def runGateway(sessionID: SessionID,
                          connection: Tcp.IncomingConnection,
                          workFlow: Flow[ByteString, ByteString, Future[Done]])
-  : UniqueKillSwitch = {
+  : UniqueKillSwitch =
+  {
     val (killSwitch, future) = connection
       .flow
       .viaMat(KillSwitches.single)(Keep.right)

@@ -1,5 +1,6 @@
 package ru.able.util
 
+import java.util.{Timer, TimerTask}
 import java.util.concurrent.TimeUnit
 
 import akka.actor.{ActorSystem, Cancellable}
@@ -8,6 +9,21 @@ import scala.concurrent.{Await, ExecutionContext, Future, TimeoutException}
 import scala.concurrent.duration.Duration
 
 object Helpers {
+  def runAfterDelay[T](delayMILLS: Long)
+                      (f: => T)
+                      (implicit system: ActorSystem, ec: ExecutionContext)
+  : Cancellable =
+  {
+    system.scheduler.scheduleOnce(Duration(delayMILLS, TimeUnit.MILLISECONDS))(f)(ec)
+  }
+
+  def runAfterDelay(delayMills: Long, timer: Timer)
+                           (f: () => Unit)
+  : Unit =
+  {
+    timer.schedule(new TimerTask() { def run: Unit = f() }, delayMills)
+  }
+
   def runWithTimeout[T](timeoutMILLS: Long)
                        (f: => T)
                        (implicit ec: ExecutionContext)
@@ -20,11 +36,12 @@ object Helpers {
     }
   }
 
-  def runAfterDelay[T](delayMILLS: Long)
-                      (f: => T)
-                      (implicit system: ActorSystem, ec: ExecutionContext)
-  : Cancellable =
+  def measureTime[T](f: => T)
+  : T =
   {
-    system.scheduler.scheduleOnce(Duration(delayMILLS, TimeUnit.MILLISECONDS))(f)(ec)
+    val s = System.nanoTime
+    val ret = f
+    println("time: "+(System.nanoTime-s)/1e6+"ms")
+    ret
   }
 }

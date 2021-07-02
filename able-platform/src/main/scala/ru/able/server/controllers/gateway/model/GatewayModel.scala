@@ -17,6 +17,6 @@ object GatewayModel {
 
   case class GatewayObj(connection: Tcp.IncomingConnection,
                         flowType: FlowType,
-                        publisher: ActorRef,
+                        actionPublisher: ActorRef,
                         killSwitch: UniqueKillSwitch)
 }
