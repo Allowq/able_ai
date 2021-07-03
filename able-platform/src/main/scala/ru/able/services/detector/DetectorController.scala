@@ -9,10 +9,10 @@ import com.typesafe.scalalogging.LazyLogging
 import org.bytedeco.javacpp.opencv_core.Mat
 import org.bytedeco.javacpp.opencv_imgproc.{COLOR_BGR2RGB, cvtColor}
 import org.platanios.tensorflow.api.{Tensor, _}
-
 import ru.able.server.controllers.flow.protocol.{Command, Event}
 import ru.able.services.detector.model.{DetectionOutput, DetectorModel, DetectorViaFileDescription}
 import ru.able.services.detector.pipeline.{DetectorStage, ShowSignedFrameStage}
+import ru.able.util.Helpers
 
 object DetectorController {
 
@@ -38,6 +38,15 @@ object DetectorController {
 
 class DetectorController private (private val _detectorModel: DetectorModel) extends Actor with LazyLogging
 {
+  // retrieve the output placeholders
+  private val _imagePlaceholder = _detectorModel.graph.getOutputByName("image_tensor:0")
+  private val _fetches = Seq(
+    _detectorModel.graph.getOutputByName("detection_boxes:0"),
+    _detectorModel.graph.getOutputByName("detection_scores:0"),
+    _detectorModel.graph.getOutputByName("detection_classes:0"),
+    _detectorModel.graph.getOutputByName("num_detections:0")
+  )
+
   def this(folderPath: Option[String] = None) {
     this(
       new DetectorViaFileDescription(folderPath).defineDetector()
@@ -52,20 +61,11 @@ class DetectorController private (private val _detectorModel: DetectorModel) ext
 
   // run the object detection model on an image
   private def detect(image: Tensor): DetectionOutput = {
-    // retrieve the output placeholders
-    val imagePlaceholder = _detectorModel.graph.getOutputByName("image_tensor:0")
-    val detectionBoxes = _detectorModel.graph.getOutputByName("detection_boxes:0")
-    val detectionScores = _detectorModel.graph.getOutputByName("detection_scores:0")
-    val detectionClasses = _detectorModel.graph.getOutputByName("detection_classes:0")
-    val numDetections = _detectorModel.graph.getOutputByName("num_detections:0")
-
-    // set image as input parameter
-    val feeds = Map(imagePlaceholder -> image)
-
     // Run the detection model
     val Seq(boxes, scores, classes, num) = _detectorModel.tfSession.run(
-      fetches = Seq(detectionBoxes, detectionScores, detectionClasses, numDetections),
-      feeds = feeds
+      fetches = _fetches,
+      // set image as input parameter
+      feeds = Map(_imagePlaceholder -> image)
     )
     DetectionOutput(boxes, scores, classes, num)
   }

@@ -26,6 +26,7 @@ object SimpleMessage {
   val TOTAL_CHUNK_SIZE = 2
   val ECHO = 3
   val UUID = 4
+  val LABEL_MAP = 5
   val CHECK_PING = 99
 
   implicit val byteOrder = java.nio.ByteOrder.BIG_ENDIAN

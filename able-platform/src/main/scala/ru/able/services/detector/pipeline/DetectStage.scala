@@ -104,7 +104,6 @@ class DetectorStage[Evt, Cmd](detectorController: ActorRef) extends GraphStage[F
     private def drawBoundingBoxes(image: Mat, detectionOutput: DetectionOutput): Mat = {
       for (i: Int <- 0 until detectionOutput.boxes.shape.size(1)) {
         val score = detectionOutput.scores(0, i).scalar.asInstanceOf[Float]
-
         if (score > 0.5) {
           val box = detectionOutput.boxes(0, i).entriesIterator.map(_.asInstanceOf[Float]).toSeq
           // we have to scale the box coordinates to the image size
@@ -114,20 +113,13 @@ class DetectorStage[Evt, Cmd](detectorController: ActorRef) extends GraphStage[F
           val xmax = (box(3) * image.size().width()).toInt
 
           val label: String = _labels match {
-            case Some(value: Map[Int, String]) => value.getOrElse(i + 1, "unknown")
+            case Some(value: Map[Int, String]) => value.getOrElse(
+              detectionOutput.classes(0, i).scalar.asInstanceOf[Float].toInt,
+              "unknown")
             case None => "unknown"
           }
 
           // draw score value
-          putText(image,
-            f"$label%s ($score%1.2f)", // text
-            new Point(xmin + 6, ymin + 38), // text position
-            FONT_HERSHEY_PLAIN, // font type
-            2.6, // font scale
-            new Scalar(0, 0, 0, 0), // text color
-            4, // text thickness
-            LINE_AA, // line type
-            false) // origin is at the top-left corner
           putText(image,
             f"$label%s ($score%1.2f)", // text
             new Point(xmin + 4, ymin + 36), // text position
@@ -138,13 +130,6 @@ class DetectorStage[Evt, Cmd](detectorController: ActorRef) extends GraphStage[F
             LINE_AA, // line type
             false) // origin is at the top-left corner
           // draw bounding box
-          rectangle(image,
-            new Point(xmin + 1, ymin + 1), // upper left corner
-            new Point(xmax + 1, ymax + 1), // lower right corner
-            new Scalar(0, 0, 0, 0), // color
-            2, // thickness
-            0, // lineType
-            0) // shift
           rectangle(image,
             new Point(xmin, ymin), // upper left corner
             new Point(xmax, ymax), // lower right corner

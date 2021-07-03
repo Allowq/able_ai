@@ -37,11 +37,11 @@ final class SessionKeeper private extends Actor with ActorLogging {
   private lazy val _connectionResolver = ConnectionResolver.createActorPool(self, _gatewayActor)
 
   override def receive: Receive = {
-    case NewConnection(conn) => processNewConnection(conn)
-    case ResetConnection(rAddr) => resetConnection(rAddr)
-    case ResolveDeviceID(conn, id) => updateDeviceID(conn, id)
-    case CheckSessionState(rAddr) => checkSessionState(rAddr, sender())
-    case msg => log.warning(s"SessionKeeper received unrecognized message: $msg")
+    case NewConnection(conn)        => processNewConnection(conn)
+    case ResetConnection(rAddr)     => resetConnection(rAddr)
+    case ResolveDeviceID(conn, id)  => updateDeviceID(conn, id)
+    case CheckSessionState(rAddr)   => checkSessionState(rAddr, sender())
+    case msg                        => log.warning(s"SessionKeeper received unrecognized message: $msg")
   }
 
   private def createNewSession(conn: Tcp.IncomingConnection): SessionID = {

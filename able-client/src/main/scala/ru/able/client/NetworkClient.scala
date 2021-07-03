@@ -18,7 +18,7 @@ import ru.able.camera.utils.settings.Settings
 import ru.able.client.NetworkClient._
 import ru.able.client.pipeline.ClientStage.{HostEvent, HostUp}
 import ru.able.client.pipeline.{ClientStage, Host, Processor, Resolver}
-import ru.able.client.protocol.{Command, Event, FrameSeqMessage, SingularCommand, SingularErrorEvent, SingularEvent, StreamEvent, StreamingCommand}
+import ru.able.client.protocol.{Command, Event, FrameSeqMessage, SimpleCommand, SimpleMessage, SingularCommand, SingularErrorEvent, SingularEvent, StreamEvent, StreamingCommand}
 import ru.able.communication.SocketFrameConverter
 
 object NetworkClient {
@@ -285,20 +285,12 @@ class NetworkClient[Cmd, Evt](hosts: Source[HostEvent, NotUsed],
   }
 
   override def receive: Receive = {
-    case frame: CameraFrame =>
-      _pool.execute(
-        () =>
-          ask(FrameSeqMessage(
-            _uuid,
-            Seq(_socketFraneConverter.convert(frame))
-          ).asInstanceOf[Cmd])
-        //TODO: you can try to process reply
-      )
-    case frames: Seq[CameraFrame] =>
-      _pool.execute(
-        () => ask(
-          FrameSeqMessage(_uuid, frames.map(_socketFraneConverter.convert)).asInstanceOf[Cmd]
-        )
-      )
+    case frame: CameraFrame => _pool.execute {
+      () => ask(FrameSeqMessage(_uuid, Seq(_socketFraneConverter.convert(frame))).asInstanceOf[Cmd])
+      //TODO: you can try to process reply
+    }
+    case frames: Seq[CameraFrame] => _pool.execute {
+      () => ask( FrameSeqMessage(_uuid, frames.map(_socketFraneConverter.convert)).asInstanceOf[Cmd] )
+    }
   }
 }

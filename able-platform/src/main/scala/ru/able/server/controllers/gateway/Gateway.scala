@@ -16,6 +16,7 @@ import ru.able.server.controllers.flow.FlowFactory
 import ru.able.server.controllers.flow.model.FlowTypes.{BasicFT, ExtendedFT}
 import ru.able.server.controllers.gateway.model.GatewayModel.{GatewayObj, GatewayRouted, RunBasicGateway, RunCustomGateway}
 import ru.able.server.controllers.session.model.KeeperModel.{ResetConnection, SessionID}
+import ru.able.util.Helpers
 
 object Gateway {
   def getReference(implicit system: ActorSystem, ec: ExecutionContext): Future[ActorRef] =

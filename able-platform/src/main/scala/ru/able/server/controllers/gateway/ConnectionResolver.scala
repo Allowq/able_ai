@@ -44,9 +44,7 @@ final class ConnectionResolver(_sessionKeeperActor: ActorRef = Actor.noSender,
 
   private def resolveConnection(connection: Tcp.IncomingConnection, sessionID: SessionID): Unit = {
     Try {
-      val askPublisher =
-        (_gatewayActor ? RunCustomGateway(sessionID, connection))
-          .mapTo[GatewayResponse]
+      val askPublisher = (_gatewayActor ? RunCustomGateway(sessionID, connection)).mapTo[GatewayResponse]
 
       Await.result(askPublisher, askActorTimeout.duration) match {
         case GatewayRouted(publisher) => publisher ! SingularCommand(SimpleCommand(MessageProtocol.UUID, ""))

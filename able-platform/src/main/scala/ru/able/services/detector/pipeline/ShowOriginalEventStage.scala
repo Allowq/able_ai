@@ -33,17 +33,13 @@ class ShowOriginalEventStage[Evt](val clientId: String = "default") extends Grap
       Try {
         msg match {
           case FrameSeqMessage(uuid, socketFrames) => canvasDetector.updateCanvas(uuid, socketFrames)
-          // TODO: Repair it
-          case _ =>
         }
       } recover {
         case e: Throwable => logger.error(e.getMessage, e)
       }
     }
 
-    override def preStart(): Unit = {
-      pull(in)
-    }
+    override def preStart(): Unit = pull(in)
   }
 
   override def shape: SinkShape[Evt] = SinkShape(in)
