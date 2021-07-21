@@ -16,9 +16,10 @@ import ru.able.server.controllers.flow.FlowFactory
 import ru.able.server.controllers.flow.model.FlowTypes.{BasicFT, ExtendedFT}
 import ru.able.server.controllers.gateway.model.GatewayModel.{GatewayObj, GatewayRouted, RunBasicGateway, RunCustomGateway}
 import ru.able.server.controllers.session.model.KeeperModel.{ResetConnection, SessionID}
-import ru.able.util.Helpers
 
 object Gateway {
+  // Example of getReference method
+  // https://stackoverflow.com/questions/33398045/what-is-the-best-way-to-get-an-actor-from-the-context-in-akka
   def getReference(implicit system: ActorSystem, ec: ExecutionContext): Future[ActorRef] =
     system
       .actorSelection("akka://ServerActorSystem/user/GatewayActor")

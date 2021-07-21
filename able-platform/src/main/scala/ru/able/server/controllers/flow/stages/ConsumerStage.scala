@@ -109,7 +109,7 @@ class ConsumerStage[Evt, Cmd](resolver: BaseResolver[Evt])
         case StartStream                               => startStream(None)
         case ConsumeStreamChunk                        => startStream(Some(evt))
         case ConsumeChunkAndEndStream                  => push(signalOut, StreamEvent(Source.single(evt)))
-        case Ignore                                    => pull(eventIn)
+        case Ignore                                    => ()
       }
     }
 

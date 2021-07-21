@@ -16,7 +16,7 @@ import ru.able.router.messages.AdvancedPluginStart
 
 class StreamerPlugin(notifier: ActorRef)(implicit mat: Materializer) extends Plugin with LazyLogging
 {
-    var pluginKillSwitch: Option[SharedKillSwitch] = None
+  var pluginKillSwitch: Option[SharedKillSwitch] = None
 
   override def start(ps: AdvancedPluginStart): Unit =
     Try({

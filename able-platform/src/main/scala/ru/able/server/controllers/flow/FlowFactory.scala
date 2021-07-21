@@ -8,7 +8,7 @@ import akka.stream.{BidiShape, FlowShape, Materializer, RestartSettings}
 import akka.stream.scaladsl.{BidiFlow, Flow, GraphDSL, Keep, Merge, RestartFlow, Sink}
 import akka.util.ByteString
 import com.typesafe.scalalogging.LazyLogging
-
+import ru.able.server.controllers.flow.FlowFactory.ControlledFlow
 import ru.able.server.controllers.flow.ResolversFactory.BaseResolver
 import ru.able.server.controllers.flow.model.FlowTypes.{BasicFT, DetectionFT, ExtendedFT, FlowType, ManagedDetectionFT}
 import ru.able.server.controllers.flow.model.ResolversFactory.{BasicRT, ExtendedRT, FrameSeqRT}
@@ -20,11 +20,16 @@ import ru.able.services.detector.pipeline.{DetectorStage, ShowSignedFrameStage}
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 
+object FlowFactory {
+  // TODO: upgrade complicated types to short entries everywhere
+  type ControlledFlow = Tuple2[ActorRef, Flow[ByteString, ByteString, Future[Done]]]
+}
+
 final class FlowFactory[Cmd, Evt](implicit context: ActorContext, mat: Materializer, ec: ExecutionContext) extends LazyLogging
 {
   def flow(flowType: FlowType)
           (rAddr: Option[InetSocketAddress], sessionKeeperActor: ActorRef = Actor.noSender)
-  : (ActorRef, Flow[ByteString, ByteString, Future[Done]]) = flowType match
+  : ControlledFlow = flowType match
   {
     case BasicFT => getBasicFlow
     case ExtendedFT => getExtendedFlow(rAddr, sessionKeeperActor)
@@ -150,10 +155,10 @@ final class FlowFactory[Cmd, Evt](implicit context: ActorContext, mat: Materiali
     }
   }
 
-  private def getExtendedFlow(rAddr: Option[InetSocketAddress], sessionKeeperActor: ActorRef)
+  private def getExtendedFlow(rAddrOpt: Option[InetSocketAddress], sessionKeeperActor: ActorRef)
   : (ActorRef, Flow[ByteString, ByteString, Future[Done]]) =
   {
-    val (actionPublisher, source) = SourceFromActorStage[Cmd](rAddr)
+    val (actionPublisher, source) = SourceFromActorStage[Cmd](rAddrOpt)
     val restartingFlow = RestartFlow.withBackoff[ByteString, ByteString](
       RestartSettings(FiniteDuration(0, "seconds"), FiniteDuration(0, "seconds"), 1)
     ){ () =>
@@ -161,7 +166,7 @@ final class FlowFactory[Cmd, Evt](implicit context: ActorContext, mat: Materiali
         import akka.stream.scaladsl.GraphDSL.Implicits._
 
         val pipeline = b.add(
-          getBasisBidiFlow(ResolversFactory(ExtendedRT))(rAddr, sessionKeeperActor)
+          getBasisBidiFlow(ResolversFactory(ExtendedRT))(rAddrOpt, sessionKeeperActor)
             .atop[ByteString, ByteString, NotUsed](MessageProtocol())
         )
         val detector = b.add(new DetectorStage(_detectorController).async)

@@ -11,7 +11,7 @@ import javax.swing.JFrame.EXIT_ON_CLOSE
 import org.bytedeco.javacv.CanvasFrame
 import ru.able.common.Orchestrator
 import ru.able.camera.motiondetector.bgsubtractor.GaussianMixtureBasedBackgroundSubstractor
-import ru.able.camera.motiondetector.plugin.MotionDetectorPlugin
+import ru.able.camera.motiondetector.plugin.{MotionDetectorPlugin, StreamerPlugin}
 import ru.able.plugin.util.ShowImage
 import ru.able.system.module.ModuleInjector
 
@@ -44,8 +44,9 @@ object AbleClient extends App with LazyLogging {
 
   val canvas = createCanvas(shutdown)
 
-//  val streamerPlugin = new StreamerPlugin(notifier)(materializer)
   val showImagePlugin = new ShowImage(canvas,"normal")(materializer)
+//  val streamerPlugin = new StreamerPlugin(notifier)(materializer)
+//  val streamerPlugin = new StreamerPlugin(networkClient)(materializer)
 //  val motionDetect = new MotionDetectorPlugin(null, backgroundSubstractor, "motion", notifier)(materializer)
   val motionDetect = new MotionDetectorPlugin(null, backgroundSubstractor, "motion", networkClient)(materializer)
 

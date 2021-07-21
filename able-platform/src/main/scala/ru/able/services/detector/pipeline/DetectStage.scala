@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 
 import akka.actor.ActorRef
 import akka.pattern.ask
-import akka.stream.{Attributes, FanOutShape2, FlowShape, Inlet, Outlet}
+import akka.stream.{Attributes, FanOutShape2, Inlet, Outlet}
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import com.typesafe.scalalogging.LazyLogging
 import org.bytedeco.javacpp.opencv_core.{FONT_HERSHEY_PLAIN, LINE_AA, Mat, Point, Scalar}
@@ -18,19 +18,20 @@ import ru.able.server.model.SocketFrame
 import scala.util.{Failure, Success, Try}
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
+
 import ru.able.services.detector.model.{CanvasFrameSpecial, DetectionOutput, SignedFrame}
 import ru.able.util.MediaConversion
 
 class DetectorStage[Evt, Cmd](detectorController: ActorRef) extends GraphStage[FanOutShape2[Evt, SignedFrame, Cmd]] with LazyLogging
 {
+  implicit val askTimeout = Timeout(Duration(15, TimeUnit.SECONDS))
+
   private val in  = Inlet[Evt]("DetectorStage.in")
   private val outFrame = Outlet[SignedFrame]("DetectorStage.outFrame")
   private val outCommand = Outlet[Cmd]("DetectorStage.outCommand")
 
-  private val _mediaConverter = MediaConversion
   private var _labels: Option[Map[Int, String]] = None
-
-  implicit val askTimeout = Timeout(Duration(15, TimeUnit.SECONDS))
+  private var _pending: Option[Either[Seq[SignedFrame], SimpleCommand]] = None
 
   private def convertToFS(t: SocketFrame): CanvasFrameSpecial = CanvasFrameSpecial(t)
 
@@ -46,11 +47,7 @@ class DetectorStage[Evt, Cmd](detectorController: ActorRef) extends GraphStage[F
           case data: Map[Int, String] => _labels = Some(data)
         }
       } recover { case ex => logger.warn(s"Cannot initialize labelmap for detector. Error thrown: $ex") }
-
-      pull(in)
     }
-
-    override def postStop(): Unit = { }
 
     setHandler(in, new InHandler {
       override def onPush(): Unit = {
@@ -59,46 +56,97 @@ class DetectorStage[Evt, Cmd](detectorController: ActorRef) extends GraphStage[F
 
           evt match {
             case FrameSeqMessage(uuid, socketFrames) => {
-              socketFrames
-                .map(convertToFS)
-                .map(SignedFrame(uuid, _))
-                .foreach(sf => detectAndPush(sf.UUID, sf.canvasFrameSpecial))
+              _pending = Some(Left(
+                socketFrames
+                  .map(convertToFS)
+                  .map(SignedFrame(uuid, _))))
             }
-            case SimpleCommand(cmd, _) => {
-              if (cmd == MessageProtocol.LABEL_MAP && _labels.isDefined)
-                push(outCommand, SingularCommand(LabelMapMessage(_labels.get)).asInstanceOf[Cmd])
-              else pull(in)
+            case cmd: SimpleCommand => _pending = Some(Right(cmd))
+          }
+
+          _pending.get match {
+            case Left(seq) if isAvailable(outFrame) => {
+              seq.headOption match {
+                case Some(value) =>
+                  decodeFrameAndPush(value.UUID, value.canvasFrameSpecial)
+                  _pending = Some(Left(seq.drop(1)))
+                case None => {
+                  _pending = None
+                  if (isAvailable(outCommand)) pull(in)
+                }
+              }
             }
+            case Right(value) if isAvailable(outCommand) => {
+              decodeCommandAndPush(value)
+              if (isAvailable(outFrame)) pull(in)
+            }
+            case _ =>
           }
         } match {
           case Success(_) =>
-          case Failure(ex) => logger.error(s"Parsing incoming event failed with exception: $ex"); pull(in)
+          case Failure(ex) => logger.error(s"Parsing incoming event failed with exception: $ex")
         }
       }
+
+      override def onUpstreamFinish(): Unit = if (_pending.isEmpty) completeStage()
     })
 
     setHandler(outFrame, new OutHandler {
-      override def onPull(): Unit = if (!hasBeenPulled(in)) pull(in)
+      override def onPull(): Unit = {
+        if (_pending.isDefined) {
+          _pending.get.left.foreach { seq =>
+            seq.headOption match {
+              case Some(value) => {
+                decodeFrameAndPush(value.UUID, value.canvasFrameSpecial)
+                _pending = Some(Left(seq.drop(1)))
+              }
+              case None => {
+                _pending = None
+                if (isClosed(in))
+                  completeStage()
+                else if (isAvailable(outCommand))
+                  pull(in)
+              }
+            }
+          }
+        } else if (!hasBeenPulled(in)) pull(in)
+      }
     })
 
     setHandler(outCommand, new OutHandler {
-      override def onPull(): Unit = if (!hasBeenPulled(in)) pull(in)
+      override def onPull(): Unit = {
+        if (_pending.isDefined) {
+          _pending.get.right.foreach { command =>
+            decodeCommandAndPush(command)
+            if (isClosed(in))
+              completeStage()
+            else if (isAvailable(outFrame))
+              pull(in)
+          }
+        } else if (!hasBeenPulled(in)) pull(in)
+      }
     })
 
-    private val detectAndPush: (UUID, CanvasFrameSpecial) => Unit = {
-      (u, cf) => {
-        Try {
-          val pic = _mediaConverter.horizontal(_mediaConverter.toMat(cf.frame))
+    private def decodeFrameAndPush: (UUID, CanvasFrameSpecial) => Unit = { (uuid, cfs) =>
+      Try {
+        val pic = MediaConversion.horizontal(MediaConversion.toMat(cfs.frame))
 
-          val future = (detectorController ? pic).mapTo[DetectionOutput]
-          Await.result(future, askTimeout.duration) match {
-            case frame: DetectionOutput => {
-              val updatedFrame = _mediaConverter.toFrame(drawBoundingBoxes(pic, frame))
-              push(outFrame, SignedFrame(u, CanvasFrameSpecial(updatedFrame, cf.date)))
-            }
+        val future = (detectorController ? pic).mapTo[DetectionOutput]
+        Await.result(future, askTimeout.duration) match {
+          case frame: DetectionOutput => {
+            val updatedFrame = MediaConversion.toFrame(drawBoundingBoxes(pic, frame))
+            push(outFrame, SignedFrame(uuid, CanvasFrameSpecial(updatedFrame, cfs.date)))
           }
-        } recover { case ex: Throwable => logger.warn(s"Detecting on frame failed with error: $ex") }
-      }
+        }
+      } recover { case ex: Throwable => logger.warn(s"Detecting on frame failed with error: $ex") }
+    }
+
+    private def decodeCommandAndPush: SimpleCommand => Unit = { sc =>
+      try {
+        if (sc.cmd == MessageProtocol.LABEL_MAP && _labels.isDefined)
+          push(outCommand, SingularCommand(LabelMapMessage(_labels.get)).asInstanceOf[Cmd])
+        _pending = None
+      } catch { case ex: Throwable => logger.warn(s"Detecting on frame failed with error: $ex") }
     }
 
     private def drawBoundingBoxes(image: Mat, detectionOutput: DetectionOutput): Mat = {

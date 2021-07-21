@@ -55,7 +55,7 @@ case class SocketFrame(data: Array[Byte], date: LocalDateTime) extends java.io.S
 trait SocketSupport {
 
   def withSocket[T](f: (Socket) => T): T = {
-    val socket: Socket = new Socket(InetAddress.getByName("192.168.0.101"), 9999)
+    val socket: Socket = new Socket(InetAddress.getByName("127.0.0.1"), 9999)
     val result         = Try { f(socket) } recover { case e: Exception => throw e }
     socket.close()
     result.get
