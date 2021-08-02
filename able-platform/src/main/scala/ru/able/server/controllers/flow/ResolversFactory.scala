@@ -8,7 +8,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import ru.able.server.controllers.flow.protocol.MessageProtocol._
 import ru.able.server.controllers.flow.model.{FrameSeqMessage, MessageFormat, SimpleCommand, SimpleError, SimpleReply, SimpleStreamChunk}
 import ru.able.server.controllers.flow.protocol.{Action, ConsumerAction, ProducerAction}
-import ru.able.server.controllers.flow.model.ResolversFactory.{BasicRT, ExtendedRT, FrameSeqRT, ResolverType}
+import ru.able.server.controllers.flow.model.ResolversFactory.{BasicRT, ExtendedRT, ResolverType}
 
 object ResolversFactory {
 
@@ -23,7 +23,6 @@ object ResolversFactory {
     resolverType match {
       case BasicRT => new BasicResolver
       case ExtendedRT => new ExtendedResolver
-      case FrameSeqRT => new FrameSeqResolver
     }
   }
 
@@ -59,15 +58,6 @@ object ResolversFactory {
       case _: FrameSeqMessage => ConsumerAction.AcceptSignal
       case _: SimpleReply => ConsumerAction.Ignore
       case _: SimpleError => ConsumerAction.AcceptError
-      case x => println("Unhandled: " + x); ConsumerAction.Ignore
-    }
-  }
-
-  private class FrameSeqResolver[Evt](implicit mat: Materializer, ec: ExecutionContext) extends BaseResolver[Evt] {
-    def process: PartialFunction[Evt, Action] = {
-      case FrameSeqMessage(uuid, socketFrames) =>
-        socketFrames.foreach(sf => println(s"${uuid.toString}: ${sf.date.toString}"))
-        ConsumerAction.AcceptSignal
       case x => println("Unhandled: " + x); ConsumerAction.Ignore
     }
   }

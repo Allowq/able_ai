@@ -29,10 +29,10 @@ object MessageProtocol {
       .atop(Framing.simpleFramingProtocol(maximumMessageLength))
   }
 
-  private def decoderFlow: Flow[ByteString, ByteString, NotUsed] = Framing.simpleFramingProtocolDecoder(maximumMessageLength)
-  private def deserializeFlow: Flow[ByteString, MessageFormat, NotUsed] = Flow.fromFunction(deserialize)
-  private def serializeFlow: Flow[MessageFormat, ByteString, NotUsed] = Flow.fromFunction(serialize)
-  private def encoderFlow: Flow[ByteString, ByteString, NotUsed] = Framing.simpleFramingProtocolEncoder(maximumMessageLength)
+  def decoderFlow: Flow[ByteString, ByteString, NotUsed] = Framing.simpleFramingProtocolDecoder(maximumMessageLength)
+  def deserializeFlow[Evt]: Flow[ByteString, Evt, NotUsed] = Flow.fromFunction(deserialize[Evt])
+  def serializeFlow[Cmd]: Flow[Cmd, ByteString, NotUsed] = Flow.fromFunction(serialize[Cmd])
+  def encoderFlow: Flow[ByteString, ByteString, NotUsed] = Framing.simpleFramingProtocolEncoder(maximumMessageLength)
 
   private def deserialize[Cmd](bs: ByteString): Cmd = {
     val iter = bs.iterator

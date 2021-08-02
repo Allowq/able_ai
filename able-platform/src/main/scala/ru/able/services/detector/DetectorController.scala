@@ -16,10 +16,15 @@ import ru.able.util.Helpers
 
 object DetectorController {
 
-  def apply()(implicit context: ActorContext): ActorRef =
-    context.actorOf( Props(new DetectorController()), "DetectorControllerActor")
+  def apply()(implicit context: ActorContext)
+  : ActorRef =
+  {
+    context.actorOf(Props(new DetectorController()), "DetectorControllerActor")
+  }
 
-  def getDetectionFlow[Cmd, Evt](detectController: ActorRef): Flow[Event[Evt], Command[Cmd], Any] = {
+  def getDetectionFlow[Cmd, Evt](detectController: ActorRef)
+  : Flow[Event[Evt], Command[Cmd], Any] =
+  {
     Flow.fromGraph[Event[Evt], Command[Cmd], Any] {
       GraphDSL.create() { implicit b =>
         import GraphDSL.Implicits._
