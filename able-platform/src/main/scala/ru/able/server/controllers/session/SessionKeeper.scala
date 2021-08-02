@@ -13,7 +13,8 @@ import akka.util.Timeout
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
-import ru.able.server.controllers.gateway.{ConnectionResolver, Gateway}
+import ru.able.server.controllers.gateway.Gateway
+import ru.able.server.controllers.session.ConnectionResolver
 import ru.able.server.controllers.session.model.KeeperModel.{ActiveSession, CheckSessionState, DeviceID, ExpiredSession, InitSession, NewConnection, ResetConnection, ResolveConnection, ResolveDeviceID, SessionData, SessionID, SessionObj}
 
 object SessionKeeper {
@@ -131,23 +132,3 @@ final class SessionKeeper private extends Actor with ActorLogging {
     )
   }
 }
-
-//  def sendLabelMap(remoteAddress: InetSocketAddress)(implicit system: ActorSystem, ec: ExecutionContext): Unit = {
-//    implicit val askTimeout = Timeout(Duration(15, TimeUnit.SECONDS))
-//
-//    _twinConnections.get(remoteAddress).map { twinID =>
-//      _twinMap.get(twinID).map { deviceTwin =>
-//        deviceTwin.commandPublisher.map { publisher =>
-//          val future = (_detectorController ? "getDictionary").mapTo[Map[Int, String]]
-//          try {
-//            Await.result(future, askTimeout.duration) match {
-//              case data: Map[Int, String] => publisher ! SingularCommand(LabelMapMessage(data))
-//              case e => println("unfortunately")
-//            }
-//          } catch {
-//            case e: Throwable => println("unfortunately")
-//          }
-//        }
-//      }
-//    }
-//  }

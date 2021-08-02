@@ -3,16 +3,11 @@ package ru.able.services.detector
 import java.nio.ByteBuffer
 
 import akka.actor.{Actor, ActorContext, ActorRef, Props}
-import akka.stream.FlowShape
-import akka.stream.scaladsl.{Flow, GraphDSL, Sink}
 import com.typesafe.scalalogging.LazyLogging
 import org.bytedeco.javacpp.opencv_core.Mat
 import org.bytedeco.javacpp.opencv_imgproc.{COLOR_BGR2RGB, cvtColor}
 import org.platanios.tensorflow.api.{Tensor, _}
-import ru.able.server.controllers.flow.protocol.{Command, Event}
 import ru.able.services.detector.model.{DetectionOutput, DetectorModel, DetectorViaFileDescription}
-import ru.able.services.detector.pipeline.{DetectorStage, ShowSignedFrameStage}
-import ru.able.util.Helpers
 
 object DetectorController {
 
@@ -20,24 +15,6 @@ object DetectorController {
   : ActorRef =
   {
     context.actorOf(Props(new DetectorController()), "DetectorControllerActor")
-  }
-
-  def getDetectionFlow[Cmd, Evt](detectController: ActorRef)
-  : Flow[Event[Evt], Command[Cmd], Any] =
-  {
-    Flow.fromGraph[Event[Evt], Command[Cmd], Any] {
-      GraphDSL.create() { implicit b =>
-        import GraphDSL.Implicits._
-
-        val pipelineIn = b.add(new DetectorStage(detectController).async)
-        val pipelineOut = b.add(new ShowSignedFrameStage[Command[Cmd]])
-
-        pipelineIn.out0 ~> pipelineOut
-        pipelineIn.out1 ~> Sink.ignore
-
-        FlowShape(pipelineIn.in, pipelineOut.out)
-      }
-    }
   }
 }
 

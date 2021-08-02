@@ -1,6 +1,8 @@
 package ru.able.services.detector.model
 
-import org.platanios.tensorflow.api.{Graph, Session}
+import org.platanios.tensorflow.api.{Graph, Session, Tensor}
+
+case class DetectionOutput(boxes: Tensor, scores: Tensor, classes: Tensor, num: Tensor)
 
 final case class DetectorModel(graph: Graph,
                                tfSession: Session,

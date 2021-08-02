@@ -29,7 +29,6 @@ class ShowSignedFrameStage[Cmd] extends GraphStage[FlowShape[SignedFrame, Cmd]] 
           t match {
             case SignedFrame(u, f) => {
               canvasDetector.updateCanvas(u, f)
-//              push(out, SingularCommand[MessageFormat](SimpleReply("True")).asInstanceOf[Cmd])
               pull(in)
             }
             case _ => println("wtf?")

@@ -14,7 +14,7 @@ object KeeperModel {
   case class ResolveDeviceID(rAddr: InetSocketAddress, deviceID: DeviceID) extends SessionKeeperRequest
   case class CheckSessionState(rAddr: InetSocketAddress) extends SessionKeeperRequest
 
-  case class ResolveConnection(connection: Tcp.IncomingConnection, sessionID: SessionID)
+  case class ResolveConnection(connection: Tcp.IncomingConnection, sessionID: SessionID) extends SessionKeeperRequest
 
   sealed trait SessionState
   case object InitSession extends SessionState

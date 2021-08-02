@@ -1,4 +1,4 @@
-package ru.able.server.controllers.gateway
+package ru.able.server.controllers.session
 
 import java.util.concurrent.TimeUnit
 
@@ -6,14 +6,14 @@ import akka.actor.{Actor, ActorContext, ActorLogging, ActorRef, ActorSystem, Pro
 import akka.pattern.ask
 import akka.stream.scaladsl.Tcp
 import akka.util.Timeout
-
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
-import scala.util.{Failure, Success, Try}
 import ru.able.server.controllers.flow.model.SimpleCommand
 import ru.able.server.controllers.flow.protocol.{MessageProtocol, SingularCommand}
 import ru.able.server.controllers.gateway.model.GatewayModel.{GatewayResponse, GatewayRouted, RunCustomGateway}
 import ru.able.server.controllers.session.model.KeeperModel.{ResolveConnection, SessionID}
+
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
+import scala.util.{Failure, Success, Try}
 
 object ConnectionResolver {
   def apply()(implicit system: ActorSystem): ActorRef =

@@ -10,7 +10,7 @@ import ru.able.server.controllers.flow.model.{FrameSeqMessage, MessageFormat, Si
 import ru.able.server.controllers.flow.protocol.{Action, ConsumerAction, ProducerAction}
 import ru.able.server.controllers.flow.model.ResolversFactory.{BasicRT, ExtendedRT, ResolverType}
 
-object ResolversFactory {
+object ResolverFactory {
 
   abstract class BaseResolver[In] {
     def process: PartialFunction[In, Action]

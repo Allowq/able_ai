@@ -61,12 +61,12 @@ final class Gateway(_sessionKeeperActor: ActorRef) extends Actor with ActorLoggi
                                requester: ActorRef)
   : Unit =
   {
-    val (actionPublisher, workFlow) = _flowFactory.flow(ExtendedFT)(Some(connection.remoteAddress), _sessionKeeperActor)
+    val (commandPublisher, workFlow) = _flowFactory.flow(ExtendedFT)(Some(connection.remoteAddress), _sessionKeeperActor)
     val killSwitch = runGateway(sessionID, connection, workFlow)
 
-    _gateways.update(sessionID, GatewayObj(connection, ExtendedFT, actionPublisher, killSwitch))
+    _gateways.update(sessionID, GatewayObj(connection, ExtendedFT, commandPublisher, killSwitch))
 
-    requester ! GatewayRouted(actionPublisher)
+    requester ! GatewayRouted(commandPublisher)
   }
 
   private def runGateway(sessionID: SessionID,

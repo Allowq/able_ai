@@ -3,7 +3,7 @@ package ru.able.server.controllers.flow.stages
 import akka.stream._
 import akka.stream.scaladsl.Source
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
-import ru.able.server.controllers.flow.ResolversFactory.BaseResolver
+import ru.able.server.controllers.flow.ResolverFactory.BaseResolver
 import ru.able.server.controllers.flow.protocol.ConsumerAction._
 import ru.able.server.controllers.flow.protocol.{Event, ProducerAction, SingularErrorEvent, SingularEvent, StreamEvent}
 

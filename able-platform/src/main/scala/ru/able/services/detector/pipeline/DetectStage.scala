@@ -12,21 +12,20 @@ import org.bytedeco.javacpp.opencv_core.{FONT_HERSHEY_PLAIN, LINE_AA, Mat, Point
 import org.bytedeco.javacpp.opencv_imgproc.{putText, rectangle}
 import akka.util.Timeout
 import ru.able.server.controllers.flow.model.{FrameSeqMessage, LabelMapMessage, SimpleCommand}
-import ru.able.server.controllers.flow.protocol.{MessageProtocol, SingularCommand, SingularEvent}
+import ru.able.server.controllers.flow.protocol.{Event, MessageProtocol, SingularCommand, SingularEvent}
 import ru.able.server.model.SocketFrame
 
 import scala.util.{Failure, Success, Try}
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
-
 import ru.able.services.detector.model.{CanvasFrameSpecial, DetectionOutput, SignedFrame}
 import ru.able.util.MediaConversion
 
-class DetectorStage[Evt, Cmd](detectorController: ActorRef) extends GraphStage[FanOutShape2[Evt, SignedFrame, Cmd]] with LazyLogging
+class DetectorStage[Evt, Cmd](detectorController: ActorRef) extends GraphStage[FanOutShape2[Event[Evt], SignedFrame, Cmd]] with LazyLogging
 {
   implicit val askTimeout = Timeout(Duration(15, TimeUnit.SECONDS))
 
-  private val in  = Inlet[Evt]("DetectorStage.in")
+  private val in  = Inlet[Event[Evt]]("DetectorStage.in")
   private val outFrame = Outlet[SignedFrame]("DetectorStage.outFrame")
   private val outCommand = Outlet[Cmd]("DetectorStage.outCommand")
 
@@ -52,7 +51,7 @@ class DetectorStage[Evt, Cmd](detectorController: ActorRef) extends GraphStage[F
     setHandler(in, new InHandler {
       override def onPush(): Unit = {
         Try {
-          val SingularEvent(evt) = grab[Evt](in)
+          val SingularEvent(evt) = grab(in)
 
           evt match {
             case FrameSeqMessage(uuid, socketFrames) => {
