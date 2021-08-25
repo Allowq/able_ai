@@ -6,8 +6,8 @@ import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
 import org.mockito.Matchers.{any, eq => mockEq}
 import org.mockito.Mockito.verify
-import ru.able.camera.camera.CameraFrame
-import ru.able.camera.motiondetector.bgsubtractor.GaussianMixtureBasedBackgroundSubstractor
+import ru.able.camera.framereader.model.CameraFrame
+import ru.able.camera.motiondetector.bgsubtractor.GaussianMixtureBackgroundSubstractor
 
 class GaussianMixtureBasedBackgroundSubstractorSpec extends WordSpecLike
   with BeforeAndAfter
@@ -16,7 +16,7 @@ class GaussianMixtureBasedBackgroundSubstractorSpec extends WordSpecLike
 
   private val backgroundSubtractorMOG2 = mock[BackgroundSubtractorMOG2]
   private val learningRate = 1.0
-  private val underTest = new GaussianMixtureBasedBackgroundSubstractor(backgroundSubtractorMOG2, learningRate)
+  private val underTest = new GaussianMixtureBackgroundSubstractor(backgroundSubtractorMOG2, learningRate)
 
   "A GaussianMixtureBasedBackgroundSubstractor" can {
 

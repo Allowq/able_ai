@@ -1,7 +1,7 @@
 package ru.able.services.detector.pipeline
 
-import java.util.UUID
-import java.util.concurrent.TimeUnit
+import java.util.{Timer, UUID}
+import java.util.concurrent.{TimeUnit, TimeoutException}
 
 import akka.actor.ActorRef
 import akka.pattern.ask
@@ -19,16 +19,17 @@ import scala.util.{Failure, Success, Try}
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import ru.able.services.detector.model.{CanvasFrameSpecial, DetectionOutput, SignedFrame}
-import ru.able.util.MediaConversion
+import ru.able.util.{Helpers, MediaConversion}
 
 class DetectorStage[Evt, Cmd](detectorController: ActorRef) extends GraphStage[FanOutShape2[Event[Evt], SignedFrame, Cmd]] with LazyLogging
 {
-  implicit val askTimeout = Timeout(Duration(15, TimeUnit.SECONDS))
+  implicit val _askTimeout = Timeout(Duration(10, TimeUnit.SECONDS))
 
   private val in  = Inlet[Event[Evt]]("DetectorStage.in")
   private val outFrame = Outlet[SignedFrame]("DetectorStage.outFrame")
   private val outCommand = Outlet[Cmd]("DetectorStage.outCommand")
 
+  private val _timer = new Timer
   private var _labels: Option[Map[Int, String]] = None
   private var _pending: Option[Either[Seq[SignedFrame], SimpleCommand]] = None
 
@@ -38,15 +39,7 @@ class DetectorStage[Evt, Cmd](detectorController: ActorRef) extends GraphStage[F
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
 
-    override def preStart(): Unit = {
-      // TODO: Upgrade it to concurrent.Try
-      Try {
-        val future = (detectorController ? "getDictionary").mapTo[Map[Int, String]]
-        Await.result(future, askTimeout.duration) match {
-          case data: Map[Int, String] => _labels = Some(data)
-        }
-      } recover { case ex => logger.warn(s"Cannot initialize labelmap for detector. Error thrown: $ex") }
-    }
+    override def preStart(): Unit = initializeLabelMap
 
     setHandler(in, new InHandler {
       override def onPush(): Unit = {
@@ -64,21 +57,8 @@ class DetectorStage[Evt, Cmd](detectorController: ActorRef) extends GraphStage[F
           }
 
           _pending.get match {
-            case Left(seq) if isAvailable(outFrame) => {
-              seq.headOption match {
-                case Some(value) =>
-                  decodeFrameAndPush(value.UUID, value.canvasFrameSpecial)
-                  _pending = Some(Left(seq.drop(1)))
-                case None => {
-                  _pending = None
-                  if (isAvailable(outCommand)) pull(in)
-                }
-              }
-            }
-            case Right(value) if isAvailable(outCommand) => {
-              decodeCommandAndPush(value)
-              if (isAvailable(outFrame)) pull(in)
-            }
+            case Left(frameSeq) if isAvailable(outFrame) => checkFramesPendingAndPush(frameSeq)
+            case Right(command) if isAvailable(outCommand) => decodeCommandAndPush(command)
             case _ =>
           }
         } match {
@@ -92,52 +72,59 @@ class DetectorStage[Evt, Cmd](detectorController: ActorRef) extends GraphStage[F
 
     setHandler(outFrame, new OutHandler {
       override def onPull(): Unit = {
-        if (_pending.isDefined) {
-          _pending.get.left.foreach { seq =>
-            seq.headOption match {
-              case Some(value) => {
-                decodeFrameAndPush(value.UUID, value.canvasFrameSpecial)
-                _pending = Some(Left(seq.drop(1)))
-              }
-              case None => {
-                _pending = None
-                if (isClosed(in))
-                  completeStage()
-                else if (isAvailable(outCommand))
-                  pull(in)
-              }
-            }
-          }
-        } else if (!hasBeenPulled(in)) pull(in)
+        if (_pending.isDefined)
+          _pending.get.left.foreach(checkFramesPendingAndPush)
+        else if (!hasBeenPulled(in))
+          pull(in)
       }
     })
 
     setHandler(outCommand, new OutHandler {
       override def onPull(): Unit = {
-        if (_pending.isDefined) {
-          _pending.get.right.foreach { command =>
-            decodeCommandAndPush(command)
-            if (isClosed(in))
-              completeStage()
-            else if (isAvailable(outFrame))
-              pull(in)
-          }
-        } else if (!hasBeenPulled(in)) pull(in)
+        if (_pending.isDefined)
+          _pending.get.right.foreach(decodeCommandAndPush)
+        else if (!hasBeenPulled(in))
+          pull(in)
       }
     })
 
     private def decodeFrameAndPush: (UUID, CanvasFrameSpecial) => Unit = { (uuid, cfs) =>
-      Try {
-        val pic = MediaConversion.horizontal(MediaConversion.toMat(cfs.frame))
+      if (_labels.isEmpty) {
+        push(outFrame, SignedFrame(uuid, cfs))
+      } else {
+        Try {
+          val pic = MediaConversion.horizontal(MediaConversion.toMat(cfs.frame))
 
-        val future = (detectorController ? pic).mapTo[DetectionOutput]
-        Await.result(future, askTimeout.duration) match {
-          case frame: DetectionOutput => {
-            val updatedFrame = MediaConversion.toFrame(drawBoundingBoxes(pic, frame))
-            push(outFrame, SignedFrame(uuid, CanvasFrameSpecial(updatedFrame, cfs.date)))
+          val future = (detectorController ? pic).mapTo[DetectionOutput]
+          Await.result(future, _askTimeout.duration) match {
+            case frame: DetectionOutput => {
+              val updatedFrame = MediaConversion.toFrame(drawBoundingBoxes(pic, frame))
+              push(outFrame, SignedFrame(uuid, CanvasFrameSpecial(updatedFrame, cfs.date)))
+            }
+          }
+        } recover {
+          case ex: Throwable => logger.warn(s"Detecting on frame failed with error: $ex")
+        }
+      }
+    }
+
+    private def checkFramesPendingAndPush(seq: Seq[SignedFrame]): Unit = {
+      seq.headOption match {
+        case Some(value) => {
+          decodeFrameAndPush(value.UUID, value.canvasFrameSpecial)
+          seq match {
+            case Seq(_) => _pending = None
+            case Seq(_, tail@_*)  => _pending = Some(Left(tail))
           }
         }
-      } recover { case ex: Throwable => logger.warn(s"Detecting on frame failed with error: $ex") }
+        case None => _pending = None
+      }
+      if (_pending.isEmpty) {
+        if (isClosed(in))
+          completeStage()
+        else if (isAvailable(outCommand))
+          pull(in)
+      }
     }
 
     private def decodeCommandAndPush: SimpleCommand => Unit = { sc =>
@@ -146,6 +133,11 @@ class DetectorStage[Evt, Cmd](detectorController: ActorRef) extends GraphStage[F
           push(outCommand, SingularCommand(LabelMapMessage(_labels.get)).asInstanceOf[Cmd])
         _pending = None
       } catch { case ex: Throwable => logger.warn(s"Detecting on frame failed with error: $ex") }
+
+      if (isClosed(in))
+        completeStage()
+      else if (isAvailable(outFrame))
+        pull(in)
     }
 
     private def drawBoundingBoxes(image: Mat, detectionOutput: DetectionOutput): Mat = {
@@ -187,6 +179,21 @@ class DetectorStage[Evt, Cmd](detectorController: ActorRef) extends GraphStage[F
         }
       }
       image
+    }
+
+    private def initializeLabelMap: Unit = {
+      Try {
+        val future = (detectorController ? "getDictionary").mapTo[Map[Int, String]]
+        Await.result(future, _askTimeout.duration) match {
+          case data: Map[Int, String] => _labels = Some(data)
+        }
+      } recover {
+        case _: TimeoutException => {
+          logger.warn(s"Request of LabelMap to DetectorController was timed out. Request will be repeated later.")
+          Helpers.runAfterDelay(_askTimeout, _timer)(() => initializeLabelMap)
+        }
+        case ex => logger.warn(s"Cannot initialize labelmap for detector. Error thrown: $ex")
+      }
     }
   }
 }

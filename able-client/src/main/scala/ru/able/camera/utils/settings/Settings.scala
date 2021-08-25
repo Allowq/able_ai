@@ -62,21 +62,14 @@ sealed trait Settings {
   def getProducerParallelism: Int
 }
 
-/**
-  * Settings defined in a property file.
-  *
-  * @param config typesafehub's Config
-  * @see https://github.com/typesafehub/config
-  */
 class PropertyBasedSettings(config: Config) extends Settings {
   override def cameraPath(): String = config.getString("camera.path")
 
   override def cameraFormat(): String = config.getString("camera.ffmpeg.format")
 
-  override def cameraOptions(): Map[String, AnyRef] =
-    getOptionsMap("camera.options")
+  override def cameraOptions(): Map[String, AnyRef] = getOptionsMap("camera.options")
 
-  override def motionDetectOptions(): Map[String, String] = Map()
+  override def motionDetectOptions(): Map[String, AnyRef] = getOptionsMap("motionDetect")
 
   override def getDuration(path: String, unit: TimeUnit): FiniteDuration =
     nonNull(FiniteDuration(config.getDuration(path, unit), unit), path)
@@ -93,7 +86,8 @@ class PropertyBasedSettings(config: Config) extends Settings {
 
   override def getFailureRecoveryPeriod: FiniteDuration = Duration(
     config.getDuration("NetworkConfig.client.host.failure-recovery-duration").toNanos,
-    TimeUnit.NANOSECONDS)
+    TimeUnit.NANOSECONDS
+  )
 
   override def getInputBufferSize: Int = config.getInt("NetworkConfig.client.input-buffer-size")
 
@@ -101,7 +95,7 @@ class PropertyBasedSettings(config: Config) extends Settings {
 
   override def getProducerParallelism: Int = config.getInt("NetworkConfig.pipeline.parallelism")
 
-  private def getOptionsMap(path: String) =
+  private def getOptionsMap(path: String): Map[String, AnyRef] =
     options(path)
       .map(f => f.unwrapped.asScala.toMap)
       .getOrElse(Map.empty)

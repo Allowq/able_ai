@@ -113,7 +113,7 @@ class CheckoutStage[Evt, Cmd] private (stageControlActor: ActorRef)
       }
     } match {
       case Success(_) => ()
-      case Failure(e) => logger.error(s"CheckoutStage cannot parse incoming message: ${e.getMessage}", e); false
+      case Failure(e) => logger.error(s"CheckoutStage cannot parse incoming message: ${e.getMessage}", e)
     }
   }
 

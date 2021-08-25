@@ -4,6 +4,7 @@ import java.util.{Timer, TimerTask}
 import java.util.concurrent.TimeUnit
 
 import akka.actor.{ActorSystem, Cancellable}
+import akka.util.Timeout
 
 import scala.concurrent.{Await, ExecutionContext, Future, TimeoutException}
 import scala.concurrent.duration.Duration
@@ -17,8 +18,15 @@ object Helpers {
     system.scheduler.scheduleOnce(Duration(delayMILLS, TimeUnit.MILLISECONDS))(f)(ec)
   }
 
+  def runAfterDelay(timeout: Timeout, timer: Timer)
+                   (f: () => Unit)
+  : Unit =
+  {
+    timer.schedule(new TimerTask() { def run: Unit = f() }, timeout.duration.toMillis)
+  }
+
   def runAfterDelay(delayMills: Long, timer: Timer)
-                           (f: () => Unit)
+                   (f: () => Unit)
   : Unit =
   {
     timer.schedule(new TimerTask() { def run: Unit = f() }, delayMills)

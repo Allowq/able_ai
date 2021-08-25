@@ -9,14 +9,11 @@ import com.google.inject.name.Names
 import com.typesafe.scalalogging.LazyLogging
 import javax.swing.JFrame.EXIT_ON_CLOSE
 import org.bytedeco.javacv.CanvasFrame
-import ru.able.common.Orchestrator
-import ru.able.camera.motiondetector.bgsubtractor.GaussianMixtureBasedBackgroundSubstractor
+import ru.able.camera.motiondetector.bgsubtractor.GaussianMixtureBackgroundSubstractor
 import ru.able.camera.motiondetector.plugin.{MotionDetectorPlugin, StreamerPlugin}
-import ru.able.plugin.util.ShowImage
+import ru.able.router.Orchestrator
+import ru.able.camera.framereader.plugin.ShowImagePlugin
 import ru.able.system.module.ModuleInjector
-
-import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
 
 object AbleClient extends App with LazyLogging {
 
@@ -31,32 +28,30 @@ object AbleClient extends App with LazyLogging {
   private implicit val executionContext = materializer.system.dispatchers.defaultGlobalDispatcher
 
   private val modules               = new ModuleInjector(actorSystem, materializer)
-  private val orchestator           = modules.injector.getInstance(classOf[Orchestrator])
-  private val backgroundSubstractor = modules.injector.getInstance(classOf[GaussianMixtureBasedBackgroundSubstractor])
-  private val networkClient         = modules.injector.getInstance(Key.get(classOf[ActorRef], Names.named("NetworkClient")))
+  private val orchestrator          = modules.injector.getInstance(classOf[Orchestrator])
+  private val backgroundSubstractor = modules.injector.getInstance(classOf[GaussianMixtureBackgroundSubstractor])
+  private val communicationProvider = modules.injector.getInstance(Key.get(classOf[ActorRef], Names.named("TCPCommunication")))
 //  private val notifier              = modules.injector.getInstance(Key.get(classOf[ActorRef], Names.named("Notifier")))
 
   lazy val shutdown: Unit = {
     logger.info(s"AbleClient shutdown.")
-    stopStreaming(orchestator)
-    materializer.shutdown()
+    stopStreaming(orchestrator)
+//    materializer.shutdown()
   }
 
   val canvas = createCanvas(shutdown)
 
-  val showImagePlugin = new ShowImage(canvas,"normal")(materializer)
+  val showImagePlugin = new ShowImagePlugin(canvas)
 //  val streamerPlugin = new StreamerPlugin(notifier)(materializer)
 //  val streamerPlugin = new StreamerPlugin(networkClient)(materializer)
-//  val motionDetect = new MotionDetectorPlugin(null, backgroundSubstractor, "motion", notifier)(materializer)
-  val motionDetect = new MotionDetectorPlugin(null, backgroundSubstractor, "motion", networkClient)(materializer)
+//  val motionDetect = new MotionDetectorPlugin(null, backgroundSubstractor, notifier)
+  val motionDetect = new MotionDetectorPlugin(backgroundSubstractor, communicationProvider)
 
 //  orchestator.addPlugin(streamerPlugin)
-  orchestator.addPlugin(showImagePlugin)
-  orchestator.addPlugin(motionDetect)
+  orchestrator.addPlugin(showImagePlugin)
+  orchestrator.addPlugin(motionDetect)
 
-  startStreaming(orchestator)
-
-  sys.addShutdownHook(shutdown)
+  startStreaming(orchestrator)
 
   private def startStreaming(orchestrator: Orchestrator) = {
     orchestrator.start()
@@ -71,19 +66,12 @@ object AbleClient extends App with LazyLogging {
 
   private def createCanvas(shutdown: => Unit): CanvasFrame = {
     val canvas = new CanvasFrame("Able Client")
+    // TODO: Remove it and upgrade to graceful shutdown
     canvas.setDefaultCloseOperation(EXIT_ON_CLOSE)
     canvas.addWindowListener(new WindowAdapter() {
-      override def windowClosing(windowEvent: java.awt.event.WindowEvent): Unit = {
-        logger.debug("Canvas close")
-        shutdown
-      }
+      override def windowClosing(windowEvent: java.awt.event.WindowEvent): Unit = shutdown
     })
-    canvas
-  }
 
-  def sleep(ms: Int) = {
-    Await.ready(Future {
-      Thread.sleep(ms - 10)
-    }, ms millisecond)
+    canvas
   }
 }

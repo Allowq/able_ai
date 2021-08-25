@@ -1,14 +1,11 @@
 package ru.able.router
 
-import akka.stream.KillSwitch
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{Matchers, WordSpec}
 import org.mockito.Mockito.verify
-
-import ru.able.camera.camera.reader.BroadCastRunnableGraph
-import ru.able.common.Switches.GlobalKillSwitch
-import ru.able.plugin.Plugin
-import ru.able.router.messages.{AdvancedPluginStart, PluginStart}
+import ru.able.camera.framereader.graph.broadcast.BroadcastRunnableGraph
+import ru.able.router.model.Orchestrator.GlobalKillSwitch
+import ru.able.router.model.{AdvancedPluginStart, Plugin}
 
 class PluginRouterSpec extends WordSpec with Matchers with MockitoSugar {
 
@@ -67,7 +64,7 @@ class PluginRouterSpec extends WordSpec with Matchers with MockitoSugar {
         val pluginA   = mock[Plugin]
         val pluginB   = mock[Plugin]
         val ks        = mock[GlobalKillSwitch]
-        val bs        = mock[BroadCastRunnableGraph]
+        val bs        = mock[BroadcastRunnableGraph]
         val ps        = AdvancedPluginStart(ks, bs)
 
         val result = underTest.addPlugin(pluginA).addPlugin(pluginB).start(ps)
@@ -92,9 +89,6 @@ class PluginRouterSpec extends WordSpec with Matchers with MockitoSugar {
         val underTest = PluginRouter.empty
         val pluginA   = mock[Plugin]
         val pluginB   = mock[Plugin]
-        val ks        = mock[KillSwitch]
-        val bs        = mock[BroadCastRunnableGraph]
-        val ps        = PluginStart(ks, bs)
 
         val result = underTest.addPlugin(pluginA).addPlugin(pluginB).stop()
 

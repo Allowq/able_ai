@@ -2,19 +2,16 @@ package ru.able.router
 
 import akka.actor.{ActorRef, FSM, Props}
 import akka.util.Timeout
-import scala.concurrent.ExecutionContext
-
 import ru.able.camera.utils.settings.Settings
-import ru.able.router.messages.Messages._
-import ru.able.router.messages._
+import ru.able.router.model.StatusMsgFSM._
+import ru.able.router.model.{Active, Error, GoToIdle, Idle, Ready, RequestFSM, Start, StateFSM, Status, Stop, Waiting}
 
 object SwitchFSM {
 
   val Name = classOf[SwitchFSM].getName
 
-  def props(systemInitializer: ActorRef, settings: Settings)(implicit ec: ExecutionContext) = {
+  def props(systemInitializer: ActorRef, settings: Settings) =
     Props(new SwitchFSM(systemInitializer, settings))
-  }
 }
 
 /**
@@ -22,8 +19,7 @@ object SwitchFSM {
   * shutdown killSwitch on Stop
   * delegate state changes to a router
   */
-class SwitchFSM(systemInitializer: ActorRef, settings: Settings)(implicit val ec: ExecutionContext)
-  extends FSM[State, Request]
+class SwitchFSM(systemInitializer: ActorRef, settings: Settings) extends FSM[StateFSM, RequestFSM]
 {
   private val duration         = settings.getDuration("system.options.startUpTimeout")
   private implicit val timeout = Timeout(duration)
@@ -63,8 +59,8 @@ class SwitchFSM(systemInitializer: ActorRef, settings: Settings)(implicit val ec
     case Active -> Idle =>
       stateData match {
         case Start(ks) =>
+          systemInitializer ! Stop
           ks.shutdown()
-          sender() ! Ready(Finished)
         case _ =>
           log.warning("received unhandled request {} in state Active", stateName)
       }

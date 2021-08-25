@@ -8,13 +8,9 @@ import scala.concurrent.ExecutionContext
 class RouterInjector extends AbstractModule {
 
   override def configure(): Unit = {
-    bind(classOf[ExecutionContext])
-      .annotatedWith(Names.named("MessageExecutionContext"))
-      .toProvider(classOf[MessageExecutionContextProvider])
-
     bind(classOf[ActorRef])
-      .annotatedWith(Names.named("RouterFSM"))
-      .toProvider(classOf[RouterFSMProvider])
+      .annotatedWith(Names.named("PluginRegistryFSM"))
+      .toProvider(classOf[PluginRegistryProvider])
       .asEagerSingleton()
 
     bind(classOf[ActorRef])

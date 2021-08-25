@@ -8,26 +8,22 @@ import com.typesafe.scalalogging.LazyLogging
 import org.bytedeco.javacpp.opencv_core
 import org.bytedeco.javacpp.opencv_core._
 import org.bytedeco.javacpp.opencv_imgproc._
-import org.bytedeco.javacv._
-import ru.able.camera.camera.CameraFrame
-import ru.able.camera.camera.MotionDetectFrame
+
+import ru.able.camera.framereader.model.{CameraFrame, MotionDetectFrame}
 import ru.able.camera.motiondetector.bgsubtractor.BackgroundSubstractor
-import ru.able.camera.motiondetector.stage.BackgroundSubstractorStage
-import ru.able.plugin.Plugin
-import ru.able.router.messages.AdvancedPluginStart
+import ru.able.camera.motiondetector.plugin.stage.BackgroundSubstractorStage
+import ru.able.router.model.{AdvancedPluginStart, Plugin}
 
 import scala.util.Try
 
-class MotionDetectorPlugin(canvas: CanvasFrame,
-                           backgroundSubstractor: BackgroundSubstractor,
-                           name: String = "",
-                           notifier: ActorRef)(implicit mat: Materializer) extends Plugin with LazyLogging
+class MotionDetectorPlugin(backgroundSubstractor: BackgroundSubstractor, notifier: ActorRef)
+                          (implicit mat: Materializer) extends Plugin with LazyLogging
 {
-  val structuringElementSize                     = new Size(4, 4)
+  val structuringElementSize = new Size(4, 4)
   var pluginKillSwitch: Option[SharedKillSwitch] = None
 
-  override def start(ps: AdvancedPluginStart): Unit =
-    Try({
+  override def start(ps: AdvancedPluginStart): Unit = {
+    Try{
       pluginKillSwitch = Some(KillSwitches.shared("BackgroundSubstractor"))
       val (broadcast, killSwitch) = (ps.broadcast, ps.ks.sharedKillSwitch)
 
@@ -40,15 +36,17 @@ class MotionDetectorPlugin(canvas: CanvasFrame,
         .via(Flow[MotionDetectFrame].filter(reachedThreshold))
         .via(Flow[MotionDetectFrame].map(_.originalFrame))
         .runWith(Sink.foreach(sendNotification))
-//      .runWith(new ShowImageStage(canvas, iplImageConverter, name))
-
-    }) recover {
+    } recover {
       case e: Exception => logger.error(e.getMessage, e)
     }
+  }
+
+  override def stop(): Unit = pluginKillSwitch match {
+    case Some(ks) => ks.shutdown()
+    case None     => logger.error("shutdown")
+  }
 
   private def printPluginId(cf: CameraFrame): CameraFrame = {
-    //    logger.debug(" new frame " + cf.date)
-
     val box_text_l = "Motion Detector ==============================="
     val imgMat     = cf.imgMat
     val point      = new opencv_core.Point(50, 60)
@@ -59,13 +57,7 @@ class MotionDetectorPlugin(canvas: CanvasFrame,
     CameraFrame(imgMat, cf.date)
   }
 
-  private def reachedThreshold(f: MotionDetectFrame): Boolean =
-    cvCountNonZero(f.maskedImg) > 5000
+  private def reachedThreshold(f: MotionDetectFrame): Boolean = cvCountNonZero(f.maskedImg) > 5000
 
-  private def sendNotification(f: CameraFrame) = notifier ! f
-
-  override def stop(): Unit = pluginKillSwitch match {
-    case Some(ks) => ks.shutdown()
-    case None     => logger.error("shutdown")
-  }
+  private def sendNotification(f: CameraFrame): Unit = notifier ! f
 }

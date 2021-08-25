@@ -28,6 +28,7 @@ object SessionKeeper {
 }
 
 final class SessionKeeper private extends Actor with ActorLogging {
+  // TODO: Define FSM for suspending status on DeviseController initialize timeout
   implicit val askTimeout = Timeout(Duration(5, TimeUnit.SECONDS))
   implicit val system: ActorSystem = context.system
   implicit val ec: ExecutionContext = context.dispatcher

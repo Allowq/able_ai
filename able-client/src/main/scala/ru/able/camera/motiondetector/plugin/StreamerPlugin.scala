@@ -7,19 +7,18 @@ import com.typesafe.scalalogging.LazyLogging
 import org.bytedeco.javacpp.opencv_core
 import org.bytedeco.javacpp.opencv_core._
 import org.bytedeco.javacpp.opencv_imgproc.putText
+import ru.able.camera.framereader.model.CameraFrame
+import ru.able.router.model.{AdvancedPluginStart, Plugin}
+
 import scala.concurrent.duration.DurationInt
 import scala.util.Try
-
-import ru.able.camera.camera.CameraFrame
-import ru.able.plugin.Plugin
-import ru.able.router.messages.AdvancedPluginStart
 
 class StreamerPlugin(notifier: ActorRef)(implicit mat: Materializer) extends Plugin with LazyLogging
 {
   var pluginKillSwitch: Option[SharedKillSwitch] = None
 
   override def start(ps: AdvancedPluginStart): Unit =
-    Try({
+    Try {
       pluginKillSwitch = Some(KillSwitches.shared("Streamer"))
       val (broadcast, killSwitch) = (ps.broadcast, ps.ks.sharedKillSwitch)
 
@@ -30,7 +29,7 @@ class StreamerPlugin(notifier: ActorRef)(implicit mat: Materializer) extends Plu
         .map(printPluginId)
         .groupedWithin(5, 1000 millis)
         .runWith(Sink.foreach(sendNotificationBatch))
-    }) recover {
+    } recover {
       case e: Exception => logger.error(e.getMessage, e)
     }
 

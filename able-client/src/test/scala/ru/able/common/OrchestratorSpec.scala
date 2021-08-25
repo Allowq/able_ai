@@ -13,9 +13,9 @@ import testutils.TestSystem.TestActorSystem
 
 import scala.concurrent.duration._
 import ru.able.camera.utils.settings.Settings
-import ru.able.plugin.Plugin
-import ru.able.router.RouterFSM.{Add, Remove}
-import ru.able.router.messages.{Start, Stop}
+import ru.able.router.Orchestrator
+import ru.able.router.PluginRegistryFSM.{Add, Remove}
+import ru.able.router.model.{Plugin, Start, Stop}
 
 class OrchestratorSpec extends TestKit(ActorSystem(TestActorSystem))
   with ImplicitSender

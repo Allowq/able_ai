@@ -12,8 +12,9 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object MediaConversion {
 
-  private implicit val ec: ExecutionContext =
-    ExecutionContext.fromExecutor(Executors.newSingleThreadExecutor())
+  private implicit val ec: ExecutionContext = ExecutionContext.fromExecutor(
+    Executors.newFixedThreadPool(Runtime.getRuntime.availableProcessors())
+  )
 
   // Each thread gets its own greyMat for safety
   private val frameToMatConverter = ThreadLocal.withInitial(new Supplier[OpenCVFrameConverter.ToMat] {
