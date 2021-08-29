@@ -2,24 +2,14 @@ package ru.able.services.detector
 
 import java.nio.ByteBuffer
 
-import akka.actor.{Actor, ActorContext, ActorRef, Props}
-import com.typesafe.scalalogging.LazyLogging
 import org.bytedeco.javacpp.opencv_core.Mat
 import org.bytedeco.javacpp.opencv_imgproc.{COLOR_BGR2RGB, cvtColor}
-import org.platanios.tensorflow.api.{Tensor, _}
-import ru.able.services.detector.model.{DetectionOutput, DetectorModel, DetectorViaFileDescription}
+import org.platanios.tensorflow.api.{Shape, Tensor, UINT8}
+import ru.able.services.detector.model.{DetectionOutput, DetectorDescriber}
 
-object DetectorController {
-
-  def apply()(implicit context: ActorContext)
-  : ActorRef =
-  {
-    context.actorOf(Props(new DetectorController()), "DetectorControllerActor")
-  }
-}
-
-class DetectorController private (private val _detectorModel: DetectorModel) extends Actor with LazyLogging
+final class Detector(folderPath: Option[String] = None)
 {
+  private val _detectorModel = new DetectorDescriber().describe()
   // retrieve the output placeholders
   private val _imagePlaceholder = _detectorModel.graph.getOutputByName("image_tensor:0")
   private val _fetches = Seq(
@@ -29,28 +19,23 @@ class DetectorController private (private val _detectorModel: DetectorModel) ext
     _detectorModel.graph.getOutputByName("num_detections:0")
   )
 
-  def this(folderPath: Option[String] = None) {
-    this(
-      new DetectorViaFileDescription(folderPath).defineDetector()
-    )
-  }
-
-  override def receive: Receive = {
-    case image: Mat => sender ! detect(matToTensor(image))
-    case index: Int => sender ! _detectorModel.labelMap.getOrElse(index, "unknown")
-    case "getDictionary" => sender ! _detectorModel.labelMap
-  }
+  def detect(image: Mat): DetectionOutput = detect(matToTensor(image))
 
   // run the object detection model on an image
-  private def detect(image: Tensor): DetectionOutput = {
+  def detect(image: Tensor): DetectionOutput = {
     // Run the detection model
     val Seq(boxes, scores, classes, num) = _detectorModel.tfSession.run(
       fetches = _fetches,
       // set image as input parameter
       feeds = Map(_imagePlaceholder -> image)
     )
+
     DetectionOutput(boxes, scores, classes, num)
   }
+
+  def dictionary: Map[Int, String] = _detectorModel.labelMap
+
+  def index(i: Int): String = _detectorModel.labelMap.getOrElse(i, "unknown")
 
   // convert OpenCV tensor to TensorFlow tensor
   private def matToTensor(image: Mat): Tensor = {

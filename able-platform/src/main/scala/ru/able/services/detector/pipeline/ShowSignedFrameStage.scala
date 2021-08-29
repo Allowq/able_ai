@@ -25,15 +25,15 @@ class ShowSignedFrameStage[Cmd] extends GraphStage[FlowShape[SignedFrame, Cmd]] 
     setHandler(in, new InHandler {
       override def onPush(): Unit = {
         Try {
-          val t = grab(in)
-          t match {
+          grab(in) match {
             case SignedFrame(u, f) => {
               canvasDetector.updateCanvas(u, f)
               pull(in)
             }
-            case _ => println("wtf?")
           }
-        } recover { case e: Throwable => logger.error(e.getMessage, e) }
+        } recover {
+          case ex: Throwable => logger.error(s"Parsing incoming event failed with exception: $ex")
+        }
       }
     })
 

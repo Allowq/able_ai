@@ -42,16 +42,11 @@ final class ConnectionResolver(_sessionKeeperActor: ActorRef = Actor.noSender,
     case request => log.warning(s"DeviceResolver cannot parse incoming request: $request")
   }
 
-  private def resolveConnection(connection: Tcp.IncomingConnection, sessionID: SessionID): Unit = {
-    Try {
-      val askPublisher = (_gatewayActor ? RunCustomGateway(sessionID, connection)).mapTo[GatewayResponse]
-
-      Await.result(askPublisher, askActorTimeout.duration) match {
-        case GatewayRouted(publisher) => publisher ! SingularCommand(SimpleCommand(MessageProtocol.UUID, ""))
-      }
-    } match {
-      case Success(_) => log.info(s"Resolving command for host: ${connection.remoteAddress} sanded.")
-      case Failure(ex) => log.warning(s"Publisher resolving for connection: ${connection.remoteAddress} failed with exception: $ex")
-    }
-  }
+  private def resolveConnection(connection: Tcp.IncomingConnection, sessionID: SessionID): Unit =
+    (_gatewayActor ? RunCustomGateway(sessionID, connection)).mapTo[GatewayResponse].onComplete {
+      case Success(GatewayRouted(publisher)) =>
+        publisher ! SingularCommand(SimpleCommand(MessageProtocol.UUID, ""))
+      case Failure(ex) =>
+        log.warning(s"Publisher resolving for connection: ${connection.remoteAddress} failed with exception: $ex")
+    }(context.dispatcher)
 }

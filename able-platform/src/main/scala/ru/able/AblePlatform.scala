@@ -4,8 +4,10 @@ import akka.actor.ActorSystem
 import akka.stream.Materializer
 import com.typesafe.scalalogging.LazyLogging
 import org.bytedeco.javacpp.avformat
-
 import ru.able.server.ServerBase
+import ru.able.services.detector.util.ModelLoader
+
+import scala.util.{Failure, Success}
 
 object AblePlatform extends App with LazyLogging {
 
@@ -21,5 +23,8 @@ object AblePlatform extends App with LazyLogging {
   implicit val materializer     = Materializer.createMaterializer(actorSystem)
   implicit val executionContext = materializer.system.dispatcher
 
-  val server = new ServerBase("127.0.0.1", 9999)
+  ModelLoader.initializeModel.onComplete {
+    case Success(_) => new ServerBase("127.0.0.1", 9999)
+    case Failure(_) =>
+  }
 }

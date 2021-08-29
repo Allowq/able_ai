@@ -1,32 +1,23 @@
 package ru.able.services.detector.model
 
 import java.io.{BufferedInputStream, File, FileInputStream}
-import java.net.URL
 
 import scala.util.matching.Regex
 import scala.io.Source
-import sys.process._
 import com.typesafe.config.ConfigFactory
 import org.tensorflow.framework.GraphDef
 import org.platanios.tensorflow.api.{Graph, Session}
 
 import object_detection_structures.protos.string_int_label_map.{StringIntLabelMap, StringIntLabelMapItem}
 
-final case object DetectorViaFileDescription {
+final case object DetectorDescriber {
   private lazy val _config = ConfigFactory.defaultApplication().resolve().getConfig("modelDescription")
 
-  def getBaseDir: String = _config.getString("baseDir")
-  def getModelURL: String = _config.getString("modelUrl")
-  def getLabelMapURL: String = _config.getString("labelMapUrl")
-  def getArchiveFileName: String = s"${_config.getString("modelName")}.tar.gz"
-  def getModelName: String = _config.getString("modelName")
-
-  def getDefaultModelPath: String = _config.getString("defaultModelPath")
-  def getDefaultInferenceGraphPath: String = _config.getString("inferenceGraphPath")
-  def getDefaultLabelMapPath: String = _config.getString("labelMapPath")
+  def defaultInferenceGraphPath: String = _config.getString("inferenceGraphPath")
+  def defaultLabelMapPath: String = _config.getString("labelMapPath")
 }
 
-class DetectorViaFileDescription {
+class DetectorDescriber private {
   private var _isSpecifiedModel = false
   private var _inferenceGraphPath: String = _
   private var _labelMapPath: String = _
@@ -34,11 +25,11 @@ class DetectorViaFileDescription {
   def this(folderPath: Option[String] = None) = {
     this()
     folderPath.foreach(describeModel(_))
-    if (!isSpecifiedModel && downloadDefaultModel)
+    if (!_isSpecifiedModel)
       loadDefaultValues
   }
 
-  def defineDetector(): DetectorModel = {
+  def describe(): DetectorModel = {
     // load a pretrained detection model as TensorFlow graph
     val graphDef = GraphDef.parseFrom(
       new BufferedInputStream(
@@ -59,11 +50,7 @@ class DetectorViaFileDescription {
       }.toMap
     }
 
-    DetectorModel(
-      graph,
-      Session(graph),
-      labelMap
-    )
+    DetectorModel(graph, Session(graph), labelMap)
   }
 
   def isSpecifiedModel: Boolean = _isSpecifiedModel
@@ -97,35 +84,8 @@ class DetectorViaFileDescription {
     }
   }
 
-  private def downloadDefaultModel: Boolean = {
-    val defaultModelPath: String = DetectorViaFileDescription.getDefaultModelPath
-
-    if(!new File(defaultModelPath).exists()) {
-      println(s"Couldn\'t find object detection model in \'${defaultModelPath}\'")
-      if(!new File(defaultModelPath + ".tar.gz").exists()) {
-        println(s"Please waiting for download model from \'${DetectorViaFileDescription.getModelURL}\'")
-        new URL(DetectorViaFileDescription.getModelURL) #> new File(defaultModelPath + ".tar.gz") !!;
-        println(s"Downloading has finished: \'${defaultModelPath}\'")
-      }
-
-      val cmd = s"tar -xzf ${defaultModelPath}.tar.gz -C " +
-        s"${DetectorViaFileDescription.getBaseDir}"
-      cmd.!!
-    }
-
-    val defaultLabelMapPath: String = DetectorViaFileDescription.getDefaultLabelMapPath
-    if(!new File(defaultLabelMapPath).exists()) {
-      println(s"Couldn\'t find labels for model in \'${defaultLabelMapPath}\'")
-      println(s"Please waiting for download label map from \'${DetectorViaFileDescription.getLabelMapURL}\'")
-      new URL(DetectorViaFileDescription.getLabelMapURL) #> new File(defaultLabelMapPath) !!;
-      println(s"Downloading has finished: \'${defaultLabelMapPath}\'")
-    }
-
-    new File(defaultModelPath).exists()
-  }
-
   private def loadDefaultValues: Unit = {
-    _inferenceGraphPath = DetectorViaFileDescription.getDefaultInferenceGraphPath
-    _labelMapPath = DetectorViaFileDescription.getDefaultLabelMapPath
+    _inferenceGraphPath = DetectorDescriber.defaultInferenceGraphPath
+    _labelMapPath = DetectorDescriber.defaultLabelMapPath
   }
 }

@@ -29,7 +29,6 @@ final class FlowFactory[Cmd, Evt](implicit context: ActorContext, mat: Materiali
     case ExtendedFT => detectionManagedFlow(rAddr, sessionKeeperActor)
   }
 
-  private val _detectorController: ActorRef = DetectorController()
   private val _producerParallelism = 1
 
   private val functionApply = Flow[(Event[Evt], ProducerAction[Evt, Cmd])].mapAsync[Command[Cmd]](_producerParallelism) {
@@ -128,7 +127,7 @@ final class FlowFactory[Cmd, Evt](implicit context: ActorContext, mat: Materiali
 
         val checkout    = b.add(checkoutStage)
         val consumer    = b.add(new ConsumerStage[Evt, Cmd](resolver))
-        val detector    = b.add(new DetectorStage[Evt, Command[Cmd]](_detectorController))
+        val detector    = b.add(new DetectorStage[Evt, Command[Cmd]])
         val frameShower = b.add(new ShowSignedFrameStage)
         val producer    = b.add(new ProducerStage[Evt, Cmd]())
         val fa          = b.add(functionApply)

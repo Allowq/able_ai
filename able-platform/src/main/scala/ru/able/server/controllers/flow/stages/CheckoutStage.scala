@@ -11,16 +11,16 @@ import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import akka.util.Timeout
 import com.typesafe.scalalogging.LazyLogging
-
 import ru.able.util.Helpers.runAfterDelay
 import ru.able.server.controllers.flow.CommandActorPublisher
 import ru.able.server.controllers.flow.CommandActorPublisher.AssignStageActor
 import ru.able.server.controllers.flow.model.SimpleReply
 import ru.able.server.controllers.flow.protocol.Command
+import ru.able.server.controllers.session.model.KeeperModel
 import ru.able.server.controllers.session.model.KeeperModel.{ActiveSession, CheckSession, CheckSessionState, DeviceID, ExpiredSession, InitSession, ResolveDeviceID, SessionState}
 
 import scala.collection.immutable.Queue
-import scala.concurrent.Await
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 
@@ -41,7 +41,7 @@ object CheckoutStage {
   }
 }
 
-class CheckoutStage[Evt, Cmd] private (stageControlActor: ActorRef)
+class CheckoutStage[Evt, Cmd] private (_stageControlActor: ActorRef)
                                       (_rAddr: Option[InetSocketAddress], _sessionKeeper: ActorRef)
   extends GraphStage[FlowShape[Evt, Evt]] with LazyLogging
 {
@@ -61,7 +61,7 @@ class CheckoutStage[Evt, Cmd] private (stageControlActor: ActorRef)
     private var _messages: Queue[Command[Cmd]] = Queue()
 
     override def preStart(): Unit = {
-      stageControlActor ! AssignStageActor(self.ref)
+      _stageControlActor ! AssignStageActor(self.ref)
 
       if (_sessionKeeper == Actor.noSender || _rAddr.isEmpty)
         _sessionState = ExpiredSession
@@ -70,10 +70,18 @@ class CheckoutStage[Evt, Cmd] private (stageControlActor: ActorRef)
     setHandler(eventIn, new InHandler {
       override def onPush(): Unit = {
         val evt = grab(eventIn)
-        logSessionChecking(evt)
-        _sessionState == ActiveSession match {
-          case true => push(eventOut, evt)
-          case _ => pull(eventIn)
+
+        _sessionState match {
+          case ActiveSession                          => push(eventOut, evt)
+          case s =>
+            s match {
+              case ExpiredSession => logger.warn(s"Session expired! Unhandled message: $evt.")
+              case CheckSession   => logger.info(s"Session checking in progress. Unhandled message: $evt.")
+              case InitSession if checkReplyUUID(evt) => ()
+              case InitSession    => logger.info(s"Session initialization in progress. Unhandled message: $evt.")
+              case ex             => logger.warn(s"CheckoutStage cannot parse incoming message: $ex")
+            }
+            pull(eventIn)
         }
       }
     })
@@ -100,52 +108,29 @@ class CheckoutStage[Evt, Cmd] private (stageControlActor: ActorRef)
         }
       }
     }
-  }
 
-  private def logSessionChecking(evt: Evt): Unit = {
-    Try {
-      _sessionState match {
-        case InitSession if checkReplyUUID(evt) => ()
-        case InitSession => logger.info(s"Session initialization in progress. Unhandled message: $evt.")
-        case CheckSession => logger.info(s"Session checking in progress. Unhandled message: $evt.")
-        case ExpiredSession => logger.warn(s"Session expired! Unhandled message: $evt.")
-        case ActiveSession => ()
+    private def checkReplyUUID: PartialFunction[Evt, Boolean] = {
+      case SimpleReply(payload) if _rAddr.isDefined => {
+        val uuid = UUID.fromString(payload.asInstanceOf[String])
+        _sessionKeeper ! ResolveDeviceID(_rAddr.get, DeviceID(Some(uuid)))
+        _sessionState = CheckSession
+        runAfterDelay(askTimeout.duration.toMillis, _timer)(() => requestStateFromKeeper)
+
+        true
       }
-    } match {
-      case Success(_) => ()
-      case Failure(e) => logger.error(s"CheckoutStage cannot parse incoming message: ${e.getMessage}", e)
+      case _ => false
     }
-  }
 
-  private def checkReplyUUID: PartialFunction[Evt, Boolean] = {
-    case SimpleReply(payload) if _rAddr.isDefined => {
-      val uuid = UUID.fromString(payload.asInstanceOf[String])
-      _sessionKeeper ! ResolveDeviceID(_rAddr.get, DeviceID(Some(uuid)))
-
-      _sessionState = CheckSession
-      runAfterDelay(askTimeout.duration.toMillis, _timer)(() => requestStateFromKeeper)
-
-      true
-    }
-    case _ => false
-  }
-
-  private def requestStateFromKeeper(): Unit = {
-    Try[SessionState] {
-      val askSessionKeeper = (_sessionKeeper ? CheckSessionState(_rAddr.get)).mapTo[SessionState]
-      Await.result(askSessionKeeper, askTimeout.duration) match {
-        case CheckSession => InitSession
-        case state => state
-      }
-    } match {
-      case Success(state) => {
-        _sessionState = state
-        logger.info(s"Checkout stage state update to: $state.")
-      }
-      case Failure(exception) => {
-        logger.warn(s"State updating failure with exception: $exception!")
-        _sessionState = InitSession
-      }
-    }
+    private def requestStateFromKeeper(): Unit =
+      (_sessionKeeper ? CheckSessionState(_rAddr.get)).mapTo[SessionState].onComplete {
+        case Success(value) => value match {
+          case KeeperModel.CheckSession         => _sessionState = InitSession
+          case state: KeeperModel.SessionState  => _sessionState = state
+        }
+        case Failure(ex) => {
+          _sessionState = InitSession
+          logger.warn(s"State updating failure with exception: $ex!")
+        }
+      }(materializer.executionContext)
   }
 }

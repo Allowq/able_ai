@@ -7,6 +7,7 @@ import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
 import akka.stream.{ClosedShape, Inlet, Outlet, OverflowStrategy, QueueOfferResult}
 import akka.stream.scaladsl.{BidiFlow, Flow, GraphDSL, Merge, RunnableGraph, Sink, Source}
 import akka.util.ByteString
+
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.util.Try
@@ -14,7 +15,7 @@ import java.util.UUID
 
 import ru.able.camera.framereader.model.CameraFrame
 import ru.able.camera.utils.settings.Settings
-import ru.able.communication.viasocket.SocketFrameConverter
+import ru.able.communication.viasocket.{SocketFrame, SocketFrameConverter}
 import ru.able.communication.viatcp.TCPCommunication._
 import ru.able.communication.viatcp.model.TCPCommunicationBase._
 import ru.able.communication.viatcp.stage.ClientStage.{HostEvent, HostUp}
@@ -159,11 +160,11 @@ trait ReactiveTCP[Cmd, Evt] extends Actor with ActorLogging
 
   override def receive: Receive = {
     case frame: CameraFrame => pool.execute {
-      () => ask(FrameSeqMessage(uuid, Seq(SocketFrameConverter.convertToSocketFrame(frame))))
+      () => ask(FrameSeqMessage(uuid, Seq(convertToSocketFrame(frame))))
       //TODO: you can try to process reply
     }
     case frames: Seq[CameraFrame] => pool.execute {
-      () => ask(FrameSeqMessage(uuid, frames.map(SocketFrameConverter.convertToSocketFrame)))
+      () => ask(FrameSeqMessage(uuid, frames.map(convertToSocketFrame)))
     }
   }
 
@@ -178,4 +179,6 @@ trait ReactiveTCP[Cmd, Evt] extends Actor with ActorLogging
   }
 
   protected def send(command: Command[Cmd]): Future[Event[Evt]]
+
+  private def convertToSocketFrame: CameraFrame => SocketFrame = SocketFrameConverter.convertToSocketFrame(_)
 }
