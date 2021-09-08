@@ -58,13 +58,13 @@ object MessageProtocol {
         bsb.putInt(x.cmd)
         bsb.putBytes(x.payload.getBytes)
       case x: SimpleReply =>
-        bsb.putInt(3)
+        bsb.putInt(2)
         bsb.putBytes(x.payload.getBytes)
       case x: SimpleStreamChunk =>
-        bsb.putInt(4)
+        bsb.putInt(3)
         bsb.putBytes(x.payload.getBytes)
       case x: SimpleError =>
-        bsb.putInt(5)
+        bsb.putInt(4)
         bsb.putBytes(x.payload.getBytes)
       case x: LabelMapMessage =>
         bsb.putInt(11)

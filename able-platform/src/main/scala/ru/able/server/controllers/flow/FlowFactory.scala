@@ -13,7 +13,6 @@ import ru.able.server.controllers.flow.model.FlowTypes.{BasicFT, ControlledFlow,
 import ru.able.server.controllers.flow.model.ResolversFactory.{BasicRT, ExtendedRT}
 import ru.able.server.controllers.flow.protocol.{Command, Event, MessageProtocol, ProducerAction, SingularCommand, SingularEvent, StreamEvent, StreamingCommand}
 import ru.able.server.controllers.flow.stages.{CheckoutStage, ConsumerStage, ProducerStage, SourceFromActorStage}
-import ru.able.services.detector.DetectorController
 import ru.able.services.detector.pipeline.{DetectorStage, ShowSignedFrameStage}
 
 import scala.concurrent.duration.FiniteDuration

@@ -45,11 +45,11 @@ object MessageProtocol {
     iter.getInt match {
       case 1 =>
         SimpleCommand(iter.getInt, new String(iter.toByteString.toArray))
-      case 3 =>
+      case 2 =>
         SimpleReply(new String(iter.toByteString.toArray))
-      case 4 =>
+      case 3 =>
         SimpleStreamChunk(new String(iter.toByteString.toArray))
-      case 5 =>
+      case 4 =>
         SimpleError(new String(iter.toByteString.toArray))
       case 11 =>
         LabelMapMessage(deserializeObject[Map[Int, String]](iter.toByteString))

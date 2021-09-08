@@ -7,7 +7,7 @@ import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import ru.able.communication.viatcp.protocol.{Command, SingularCommand, StreamingCommand}
 
 class ProducerStage[In, Out] extends GraphStage[FlowShape[Command[Out], Out]] {
-  private val in = Inlet[Command[Out]]("ProducerStage.Command.In")
+  private val in  = Inlet[Command[Out]]("ProducerStage.Command.In")
   private val out = Outlet[Out]("ProducerStage.Command.Out")
 
   val shape = new FlowShape(in, out)

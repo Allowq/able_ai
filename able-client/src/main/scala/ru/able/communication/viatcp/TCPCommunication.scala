@@ -10,7 +10,7 @@ import akka.util.ByteString
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.concurrent.duration.{Duration, FiniteDuration}
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 import java.util.UUID
 
 import ru.able.camera.framereader.model.CameraFrame
@@ -44,7 +44,7 @@ object TCPCommunication {
 
     if (_shouldReconnect) {
       val connectionMerge = builder.add(Merge[HostEvent](2))
-      hostEventSource ~> connectionMerge ~> hostEventIn
+                        hostEventSource ~> connectionMerge ~> hostEventIn
       hostEventOut ~> b.add(groupDelay) ~> connectionMerge
     } else {
       hostEventSource ~> hostEventIn
@@ -83,12 +83,13 @@ class TCPCommunication[Cmd, Evt](hosts: Source[HostEvent, NotUsed],
 {
   type Context = Promise[Event[Evt]]
 
-  val eventHandler = Sink.foreach[(Try[Event[Evt]], Promise[Event[Evt]])] {
-    case (evt, context) ⇒ context.complete(evt)
+  val eventHandler = Sink.foreach[(Try[Event[Evt]], Context)] {
+    case (Failure(msg), context) => context.failure(msg)
+    case (Success(evt), context) => context.success(evt)
   }
 
   val g = RunnableGraph.fromGraph(
-    GraphDSL.create(Source.queue[(Command[Cmd], Promise[Event[Evt]])](inputBufferSize, inputOverflowStrategy)) {
+    GraphDSL.create(Source.queue[(Command[Cmd], Context)](inputBufferSize, inputOverflowStrategy)) {
       implicit b =>
         source =>
           import GraphDSL.Implicits._
@@ -166,6 +167,7 @@ trait ReactiveTCP[Cmd, Evt] extends Actor with ActorLogging
     case frames: Seq[CameraFrame] => pool.execute {
       () => ask(FrameSeqMessage(uuid, frames.map(convertToSocketFrame)))
     }
+    case msg => log.warning(s"ReactiveTCPCommunicationActor cannot parse incoming request: $msg!")
   }
 
   protected def ask(command: MessageFormat)

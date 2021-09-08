@@ -34,9 +34,9 @@ object Processor {
         if (shouldReact) {
           val fa = b add functionApply
           val merge = b add Merge[Command[Cmd]](2)
-          commandIn ~> merge.in(0)
+          commandIn           ~> merge.in(0)
           consumer.out0 ~> fa ~> merge.in(1)
-          merge.out ~> producer
+                                 merge.out ~> producer
         } else {
           consumer.out0 ~> Sink.ignore
           commandIn ~> producer

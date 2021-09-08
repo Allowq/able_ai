@@ -25,6 +25,6 @@ object AblePlatform extends App with LazyLogging {
 
   ModelLoader.initializeModel.onComplete {
     case Success(_) => new ServerBase("127.0.0.1", 9999)
-    case Failure(_) =>
+    case Failure(_) => System.exit(0)
   }
 }
