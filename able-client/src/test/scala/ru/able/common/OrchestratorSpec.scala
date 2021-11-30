@@ -31,7 +31,7 @@ class OrchestratorSpec extends TestKit(ActorSystem(TestActorSystem))
   private val settings                 = mock[Settings]
   private val duration: FiniteDuration = FiniteDuration(50, TimeUnit.MILLISECONDS)
 
-  when(settings.getDuration(any[String], any[TimeUnit]))
+  when(settings.startupTimeoutDuration(any[String], any[TimeUnit]))
     .thenReturn(duration)
   private val underTest = new Orchestrator(switch.ref, pluginRegistry.ref, settings)
 

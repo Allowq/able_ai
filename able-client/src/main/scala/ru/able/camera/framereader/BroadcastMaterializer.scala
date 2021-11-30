@@ -6,13 +6,12 @@ import akka.stream.scaladsl.Sink
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.typesafe.scalalogging.LazyLogging
-
 import ru.able.camera.framereader.graph.broadcast.{BroadcastRunnableGraph, SourceBroadCastFactory}
 import ru.able.camera.framereader.graph.source.CameraReaderGraphFactory
 import ru.able.camera.utils.settings.Settings
 import ru.able.router.model.Orchestrator.GlobalKillSwitch
 
-import scala.concurrent.{Promise, TimeoutException}
+import scala.concurrent.{Future, Promise, TimeoutException}
 import scala.util.{Failure, Success, Try}
 
 class BroadcastMaterializer @Inject()(@Named("CameraReaderFactory") cameraReaderFactory: CameraReaderGraphFactory,
@@ -22,13 +21,13 @@ class BroadcastMaterializer @Inject()(@Named("CameraReaderFactory") cameraReader
 {
   private implicit val executionContext = materializer.system.dispatchers.defaultGlobalDispatcher
 
-  def create(gks: GlobalKillSwitch): Promise[BroadcastRunnableGraph] = {
+  def create(gks: GlobalKillSwitch): Future[BroadcastRunnableGraph] = {
     val reader    = cameraReaderFactory.create(gks)
     val broadcast = broadcastFactory.create(reader)
     val promise   = Promise[BroadcastRunnableGraph]()
 
     materalize(broadcast, promise)
-    promise
+    promise.future
   }
 
   private def materalize(broadcast: BroadcastRunnableGraph, promise: Promise[BroadcastRunnableGraph]) =

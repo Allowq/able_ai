@@ -15,7 +15,7 @@ class Orchestrator @Inject()(@Named("SwitchFSM") switch: ActorRef,
                              @Named("PluginRegistryFSM") pluginRegistry: ActorRef,
                              settings: Settings) extends LazyLogging
 {
-  private implicit val timeout = Timeout(settings.getDuration("system.options.startUpTimeout"))
+  private implicit val timeout = Timeout(settings.startupTimeoutDuration("system.options.startUpTimeout"))
 
   def addPlugin(plugin: Plugin): Unit = pluginRegistry ! Add(plugin)
   def removePlugin(plugin: Plugin): Unit = pluginRegistry ! Remove(plugin)

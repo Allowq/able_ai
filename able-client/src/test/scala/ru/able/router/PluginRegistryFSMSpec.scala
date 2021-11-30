@@ -41,7 +41,7 @@ class PluginRegistryFSMSpec
   private val killSwitch = mock[GlobalKillSwitch]
   private val broadcast  = mock[BroadcastRunnableGraph]
   private val settings   = mock[Settings]
-  when(settings.getDuration(any[String], any[TimeUnit]))
+  when(settings.startupTimeoutDuration(any[String], any[TimeUnit]))
     .thenReturn(50 milliseconds)
 
   private val underTest = TestFSMRef(new PluginRegistryFSM(settings))

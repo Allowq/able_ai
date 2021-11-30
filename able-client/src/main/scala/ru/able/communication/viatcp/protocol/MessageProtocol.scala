@@ -12,7 +12,7 @@ sealed trait MessageFormat {
 }
 
 // 1
-case class SimpleCommand(cmd: Int, payload: String) extends MessageFormat
+case class SimpleCommand(cmd: Int = MessageProtocol.UUID, payload: String = "") extends MessageFormat
 // 2
 case class SimpleReply(payload: String) extends MessageFormat
 // 3

@@ -27,7 +27,7 @@ class SwitchFSMSpec extends TestKit(ActorSystem(TestActorSystem))
   private val settings            = mock[Settings]
   private val systemInitializer   = TestProbe()
 
-  when(settings.getDuration(any[String], any[TimeUnit]))
+  when(settings.startupTimeoutDuration(any[String], any[TimeUnit]))
     .thenReturn(50 milliseconds)
 
   private val underTest  = TestFSMRef(new SwitchFSM(systemInitializer.ref, settings))

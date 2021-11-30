@@ -32,12 +32,12 @@ class SystemInitializer @Inject()(broadCastMaterializer: BroadcastMaterializer,
                                   settings: Settings)
                                  (implicit val ec: ExecutionContext) extends Actor
 {
-  private implicit val timeout = Timeout(settings.getDuration("system.options.startUpTimeout"))
+  private implicit val timeout = Timeout(settings.startupTimeoutDuration("system.options.startUpTimeout"))
 
   override def receive: Receive = {
     case Start(gks) =>
       val senderActor = sender()
-      broadCastMaterializer.create(gks).future.onComplete {
+      broadCastMaterializer.create(gks).onComplete {
         case Success(bs: BroadcastRunnableGraph) =>
           pluginRegistry ! AdvancedPluginStart(gks, bs)
           Future { Status(Right(Ok)) }.pipeTo(senderActor)

@@ -13,6 +13,7 @@ import ru.able.camera.motiondetector.bgsubtractor.GaussianMixtureBackgroundSubst
 import ru.able.camera.motiondetector.plugin.{MotionDetectorPlugin, StreamerPlugin}
 import ru.able.router.Orchestrator
 import ru.able.camera.framereader.plugin.ShowImagePlugin
+import ru.able.communication.viatcp.TCPEventBus
 import ru.able.system.module.ModuleInjector
 
 object AbleClient extends App with LazyLogging {
@@ -31,12 +32,13 @@ object AbleClient extends App with LazyLogging {
   private val orchestrator          = modules.injector.getInstance(classOf[Orchestrator])
   private val backgroundSubstractor = modules.injector.getInstance(classOf[GaussianMixtureBackgroundSubstractor])
   private val communicationProvider = modules.injector.getInstance(Key.get(classOf[ActorRef], Names.named("TCPCommunication")))
+  private val eventBus              = modules.injector.getInstance(classOf[TCPEventBus])
+
 //  private val notifier              = modules.injector.getInstance(Key.get(classOf[ActorRef], Names.named("Notifier")))
 
   lazy val shutdown: Unit = {
     logger.info(s"AbleClient shutdown.")
     stopStreaming(orchestrator)
-//    materializer.shutdown()
   }
 
   val canvas = createCanvas(shutdown)

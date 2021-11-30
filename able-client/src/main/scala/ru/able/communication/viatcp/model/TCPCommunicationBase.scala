@@ -1,18 +1,20 @@
 package ru.able.communication.viatcp.model
 
+import java.util.concurrent.TimeUnit
+
 import akka.NotUsed
 import akka.actor.ActorSystem
-import akka.stream.scaladsl.{BidiFlow, Broadcast, Flow, GraphDSL, Sink, Source}
-import akka.stream.{FlowShape, Materializer, OverflowStrategy}
+import akka.stream.scaladsl.{BidiFlow, Broadcast, Flow, GraphDSL, Merge, Sink, Source}
+import akka.stream.{FlowShape, Inlet, Materializer, Outlet, OverflowStrategy}
 import akka.util.ByteString
+
 import ru.able.camera.utils.settings.Settings
 import ru.able.communication.viatcp.TCPCommunication
-import ru.able.communication.viatcp.TCPCommunication.reconnectLogic
 import ru.able.communication.viatcp.protocol.{Command, Event}
 import ru.able.communication.viatcp.stage.ClientStage.{HostEvent, HostUp}
 import ru.able.communication.viatcp.stage.{ClientStage, Host, Processor, Resolver}
 
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.concurrent.{ExecutionContext, Promise}
 import scala.util.Try
 
@@ -34,14 +36,15 @@ object TCPCommunicationBase
                      (implicit system: ActorSystem, ec: ExecutionContext)
   : TCPCommunication[Cmd, Evt] =
   {
-    val processor = Processor[Cmd, Evt](resolver, settings.getProducerParallelism)
+    val processor = Processor[Cmd, Evt](resolver, settings.producerParallelismValue)
 
     new TCPCommunication(
       hosts,
-      settings.getMaxConnectionsPerHost,
-      settings.getMaxFailuresPerHost,
-      settings.getFailureRecoveryPeriod,
-      settings.getInputBufferSize,
+      settings.maxConnectionsPerHost,
+      settings.maxFailuresPerHost,
+      settings.failureRecoveryPeriod,
+      settings.inputBufferSize,
+      settings.clientUUID,
       inputOverflowStrategy,
       processor,
       protocol.reversed)
@@ -56,13 +59,14 @@ object TCPCommunicationBase
                      (implicit system: ActorSystem, ec: ExecutionContext)
   : TCPCommunication[Cmd, Evt] =
   {
-    val processor = Processor[Cmd, Evt](resolver, settings.getProducerParallelism)
+    val processor = Processor[Cmd, Evt](resolver, settings.producerParallelismValue)
     new TCPCommunication(
       Source(hosts.map(HostUp)),
-      settings.getMaxConnectionsPerHost,
-      settings.getMaxFailuresPerHost,
-      settings.getFailureRecoveryPeriod,
-      settings.getInputBufferSize,
+      settings.maxConnectionsPerHost,
+      settings.maxFailuresPerHost,
+      settings.failureRecoveryPeriod,
+      settings.inputBufferSize,
+      settings.clientUUID,
       inputOverflowStrategy,
       processor,
       protocol.reversed)
@@ -99,6 +103,33 @@ object TCPCommunicationBase
 
         FlowShape(s.in1, s.out2)
     })
+  }
+
+  def reconnectLogic[M](builder: GraphDSL.Builder[M],
+                        hostEventSource: Source[HostEvent, NotUsed]#Shape,
+                        hostEventIn: Inlet[HostEvent],
+                        hostEventOut: Outlet[HostEvent],
+                        reconnectDuration: FiniteDuration = Duration(2, TimeUnit.SECONDS),
+                        shouldReconnect: Boolean = true)
+                       (implicit system: ActorSystem) =
+  {
+    import GraphDSL.Implicits._
+    implicit val b = builder
+
+    val groupDelay = Flow[HostEvent]
+      .groupBy[Host](1024, { x: HostEvent ⇒ x.host })
+      .delay(reconnectDuration)
+      .map { x ⇒ system.log.warning(s"Reconnecting after ${reconnectDuration.toSeconds}s for ${x.host}"); HostUp(x.host) }
+      .mergeSubstreams
+
+    if (shouldReconnect) {
+      val connectionMerge = builder.add(Merge[HostEvent](2))
+      hostEventSource ~> connectionMerge ~> hostEventIn
+      hostEventOut ~> b.add(groupDelay) ~> connectionMerge
+    } else {
+      hostEventSource ~> hostEventIn
+      hostEventOut ~> Sink.ignore
+    }
   }
 
   def flow[Cmd, Evt](hosts: Source[HostEvent, NotUsed],

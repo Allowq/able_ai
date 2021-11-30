@@ -1,72 +1,48 @@
 package ru.able.communication.viatcp
 
-import java.util.concurrent.{ExecutorService, TimeUnit}
+import java.util.concurrent.ExecutorService
 
 import akka.NotUsed
 import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
-import akka.stream.{ClosedShape, Inlet, Outlet, OverflowStrategy, QueueOfferResult}
-import akka.stream.scaladsl.{BidiFlow, Flow, GraphDSL, Merge, RunnableGraph, Sink, Source}
+import akka.stream.{ClosedShape, OverflowStrategy, QueueOfferResult}
+import akka.stream.scaladsl.{BidiFlow, GraphDSL, RunnableGraph, Sink, Source}
 import akka.util.ByteString
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
-import scala.concurrent.duration.{Duration, FiniteDuration}
+import scala.concurrent.duration.FiniteDuration
 import scala.util.{Failure, Success, Try}
 import java.util.UUID
 
 import ru.able.camera.framereader.model.CameraFrame
 import ru.able.camera.utils.settings.Settings
 import ru.able.communication.viasocket.{SocketFrame, SocketFrameConverter}
-import ru.able.communication.viatcp.TCPCommunication._
+import ru.able.communication.viatcp.TCPEventBus.{RequestClientUUID, SubscribeTCPEvent, UnsubscribeTCPEvent}
 import ru.able.communication.viatcp.model.TCPCommunicationBase._
 import ru.able.communication.viatcp.stage.ClientStage.{HostEvent, HostUp}
 import ru.able.communication.viatcp.stage.{ClientStage, Host, Processor, Resolver}
-import ru.able.communication.viatcp.protocol.{Command, Event, FrameSeqMessage, MessageFormat, SingularCommand, SingularErrorEvent, SingularEvent, StreamEvent, StreamingCommand}
+import ru.able.communication.viatcp.protocol.{Command, Event, FrameSeqMessage, MessageFormat, MessageProtocol, SimpleCommand, SimpleReply, SingularCommand, SingularErrorEvent, SingularEvent, StreamEvent, StreamingCommand}
 
 object TCPCommunication {
-  val ProviderName                = "TCPCommunication"
-  private val _reconnectDuration  = Duration(2, TimeUnit.SECONDS)
-  private val _shouldReconnect    = true
-
-  def reconnectLogic[M](builder: GraphDSL.Builder[M],
-                        hostEventSource: Source[HostEvent, NotUsed]#Shape,
-                        hostEventIn: Inlet[HostEvent],
-                        hostEventOut: Outlet[HostEvent])
-                       (implicit system: ActorSystem) =
-  {
-    import GraphDSL.Implicits._
-    implicit val b = builder
-
-    val groupDelay = Flow[HostEvent]
-      .groupBy[Host](1024, { x: HostEvent ⇒ x.host })
-      .delay(_reconnectDuration)
-      .map { x ⇒ system.log.warning(s"Reconnecting after ${_reconnectDuration.toSeconds}s for ${x.host}"); HostUp(x.host) }
-      .mergeSubstreams
-
-    if (_shouldReconnect) {
-      val connectionMerge = builder.add(Merge[HostEvent](2))
-                        hostEventSource ~> connectionMerge ~> hostEventIn
-      hostEventOut ~> b.add(groupDelay) ~> connectionMerge
-    } else {
-      hostEventSource ~> hostEventIn
-      hostEventOut ~> Sink.ignore
-    }
-  }
+  val ProviderName = "TCPCommunication"
 
   def props[Cmd, Evt](settings: Settings,
                       resolver: Resolver[Evt],
-                      protocol: BidiFlow[Cmd, ByteString, ByteString, Evt, Any])
+                      protocol: BidiFlow[Cmd, ByteString, ByteString, Evt, Any],
+                      eventBus: TCPEventBus)
                      (implicit system: ActorSystem, ec: ExecutionContext) =
   {
     Props(
       new TCPCommunication[Cmd, Evt](
-        Source.single(HostUp(Host(settings.getNetworkClientHost, settings.getNetworkClientPort))),
-        settings.getMaxConnectionsPerHost,
-        settings.getMaxFailuresPerHost,
-        settings.getFailureRecoveryPeriod,
-        settings.getInputBufferSize,
+        Source.single(HostUp(Host(settings.networkClientHostname, settings.networkClientPort))),
+        settings.maxConnectionsPerHost,
+        settings.maxFailuresPerHost,
+        settings.failureRecoveryPeriod,
+        settings.inputBufferSize,
+        settings.clientUUID,
         OverflowStrategy.backpressure,
-        Processor[Cmd, Evt](resolver, settings.getClientParallelism)(ec),
-        protocol.reversed)
+        Processor[Cmd, Evt](resolver, settings.clientParallelismValue)(ec),
+        protocol.reversed,
+        Some(eventBus))
     )
   }
 }
@@ -76,16 +52,24 @@ class TCPCommunication[Cmd, Evt](hosts: Source[HostEvent, NotUsed],
                                  maximumFailuresPerHost: Int,
                                  recoveryPeriod: FiniteDuration,
                                  inputBufferSize: Int,
+                                 uuid: UUID,
                                  inputOverflowStrategy: OverflowStrategy,
                                  processor: Processor[Cmd, Evt],
-                                 protocol: BidiFlow[ByteString, Evt, Cmd, ByteString, Any])
+                                 protocol: BidiFlow[ByteString, Evt, Cmd, ByteString, Any],
+                                 busOpt: Option[TCPEventBus] = None)
                                 (implicit system: ActorSystem, ec: ExecutionContext) extends ReactiveTCP[Cmd, Evt]
 {
   type Context = Promise[Event[Evt]]
 
+  override protected val clientUUID: UUID = uuid
+  override protected val eventBusOpt: Option[TCPEventBus] = busOpt
+
   val eventHandler = Sink.foreach[(Try[Event[Evt]], Context)] {
     case (Failure(msg), context) => context.failure(msg)
-    case (Success(evt), context) => context.success(evt)
+    case (Success(evt), context) => {
+      eventBusOpt.map(_.publish[Evt](evt))
+      context.success(evt)
+    }
   }
 
   val g = RunnableGraph.fromGraph(
@@ -156,22 +140,37 @@ class TCPCommunication[Cmd, Evt](hosts: Source[HostEvent, NotUsed],
 
 trait ReactiveTCP[Cmd, Evt] extends Actor with ActorLogging
 {
-  val uuid: UUID            = UUID.randomUUID()
+  protected val clientUUID: UUID
+  protected val eventBusOpt: Option[TCPEventBus]
+
   val pool: ExecutorService = java.util.concurrent.Executors.newFixedThreadPool(2)
+
+  override def preStart(): Unit = {
+    super.preStart()
+    eventBusOpt.map(_.subscribe(this.self, RequestClientUUID.getClass.getSimpleName))
+  }
+
+  override def postStop(): Unit = {
+    eventBusOpt.map(_.unsubscribe(this.self))
+    super.postStop()
+  }
 
   override def receive: Receive = {
     case frame: CameraFrame => pool.execute {
-      () => ask(FrameSeqMessage(uuid, Seq(convertToSocketFrame(frame))))
+      () => ask(FrameSeqMessage(clientUUID, Seq(convertToSocketFrame(frame))))
       //TODO: you can try to process reply
     }
     case frames: Seq[CameraFrame] => pool.execute {
-      () => ask(FrameSeqMessage(uuid, frames.map(convertToSocketFrame)))
+      () => ask(FrameSeqMessage(clientUUID, frames.map(convertToSocketFrame)))
     }
+    case TCPEventBus.RequestClientUUID                      => ask(SimpleReply(clientUUID.toString))
+    case TCPEventBus.SubscribeTCPEvent(subscriber, event)   => eventBusOpt.map(_.subscribe(subscriber, event))
+    case TCPEventBus.UnsubscribeTCPEvent(subscriber)        => eventBusOpt.map(_.unsubscribe(subscriber))
+
     case msg => log.warning(s"ReactiveTCPCommunicationActor cannot parse incoming request: $msg!")
   }
 
-  protected def ask(command: MessageFormat)
-  : Future[Evt] =
+  protected def ask(command: MessageFormat): Future[Evt] =
   {
     send(SingularCommand(command.asInstanceOf[Cmd])).flatMap {
       case SingularEvent(x)      => Future(x)(context.dispatcher)

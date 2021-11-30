@@ -1,5 +1,6 @@
 package ru.able.camera.utils.settings
 
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 import com.typesafe.config.Config
@@ -34,6 +35,8 @@ sealed trait Settings {
     */
   def cameraOptions(): Map[String, AnyRef]
 
+  def clientUUID: UUID
+
   /**
     * Options for BackgroundSubstractorMog2.
     *
@@ -41,59 +44,62 @@ sealed trait Settings {
     */
   def motionDetectOptions(): Map[String, AnyRef]
 
-  def getDuration(path: String, unit: TimeUnit = TimeUnit.SECONDS): FiniteDuration
+  def startupTimeoutDuration(path: String, unit: TimeUnit = TimeUnit.SECONDS): FiniteDuration
 
   def getInt(path: String): Int
 
-  def getNetworkClientHost: String
+  def networkClientHostname: String
 
-  def getNetworkClientPort: Int
+  def networkClientPort: Int
 
-  def getMaxConnectionsPerHost: Int
+  def maxConnectionsPerHost: Int
 
-  def getMaxFailuresPerHost: Int
+  def maxFailuresPerHost: Int
 
-  def getFailureRecoveryPeriod: FiniteDuration
+  def failureRecoveryPeriod: FiniteDuration
 
-  def getInputBufferSize: Int
+  def inputBufferSize: Int
 
-  def getClientParallelism: Int
+  def clientParallelismValue: Int
 
-  def getProducerParallelism: Int
+  def producerParallelismValue: Int
 }
 
 class PropertyBasedSettings(config: Config) extends Settings {
+
+  override def getInt(path: String): Int = config.getInt(path)
+
   override def cameraPath(): String = config.getString("camera.path")
 
   override def cameraFormat(): String = config.getString("camera.ffmpeg.format")
 
   override def cameraOptions(): Map[String, AnyRef] = getOptionsMap("camera.options")
 
+  override def clientUUID: UUID = UUID.fromString(config.getString("NetworkConfig.client.uuid"))
+
   override def motionDetectOptions(): Map[String, AnyRef] = getOptionsMap("motionDetect")
 
-  override def getDuration(path: String, unit: TimeUnit): FiniteDuration =
+  override def startupTimeoutDuration(path: String, unit: TimeUnit): FiniteDuration =
     nonNull(FiniteDuration(config.getDuration(path, unit), unit), path)
 
-  override def getInt(path: String): Int = config.getInt(path)
+  override def networkClientHostname: String = config.getString("NetworkConfig.client.host.address")
 
-  override def getNetworkClientHost: String = config.getString("NetworkConfig.client.host.address")
+  override def networkClientPort: Int = config.getInt("NetworkConfig.client.host.port")
 
-  override def getNetworkClientPort: Int = config.getInt("NetworkConfig.client.host.port")
+  override def maxConnectionsPerHost: Int = config.getInt("NetworkConfig.client.host.max-connections")
 
-  override def getMaxConnectionsPerHost: Int = config.getInt("NetworkConfig.client.host.max-connections")
+  override def maxFailuresPerHost: Int = config.getInt("NetworkConfig.client.host.max-failures")
 
-  override def getMaxFailuresPerHost: Int = config.getInt("NetworkConfig.client.host.max-failures")
-
-  override def getFailureRecoveryPeriod: FiniteDuration = Duration(
+  override def failureRecoveryPeriod: FiniteDuration = Duration(
     config.getDuration("NetworkConfig.client.host.failure-recovery-duration").toNanos,
     TimeUnit.NANOSECONDS
   )
 
-  override def getInputBufferSize: Int = config.getInt("NetworkConfig.client.input-buffer-size")
+  override def inputBufferSize: Int = config.getInt("NetworkConfig.client.input-buffer-size")
 
-  override def getClientParallelism: Int = config.getInt("NetworkConfig.client.parallelism")
+  override def clientParallelismValue: Int = config.getInt("NetworkConfig.client.parallelism")
 
-  override def getProducerParallelism: Int = config.getInt("NetworkConfig.pipeline.parallelism")
+  override def producerParallelismValue: Int = config.getInt("NetworkConfig.pipeline.parallelism")
 
   private def getOptionsMap(path: String): Map[String, AnyRef] =
     options(path)

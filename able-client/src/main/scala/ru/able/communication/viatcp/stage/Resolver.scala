@@ -29,10 +29,10 @@ object FrameSeqHandler extends Resolver[MessageFormat] {
   private def processSimpleCommands(command: SimpleCommand): Action = {
     command.cmd match {
       case ECHO => println("ECHO: " + command.payload); ConsumerAction.Ignore
-      case UUID => ProducerAction.Signal {
-        x: SimpleCommand => Future(SimpleReply("1e7c5a66-2d2c-49f9-b3ea-641fbd94bec9"))
-      }
-//      case UUID => ConsumerAction.AcceptSignal
+//      case UUID => ProducerAction.Signal {
+//        x: SimpleCommand => Future(SimpleReply("1e7c5a66-2d2c-49f9-b3ea-641fbd94bec9"))
+//      }
+      case UUID => ConsumerAction.AcceptSignal
       case CHECK_PING => println("PING_ACCEPTED: " + command.payload); ConsumerAction.Ignore
     }
   }

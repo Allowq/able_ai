@@ -21,7 +21,7 @@ object SwitchFSM {
   */
 class SwitchFSM(systemInitializer: ActorRef, settings: Settings) extends FSM[StateFSM, RequestFSM]
 {
-  private val duration         = settings.getDuration("system.options.startUpTimeout")
+  private val duration         = settings.startupTimeoutDuration("system.options.startUpTimeout")
   private implicit val timeout = Timeout(duration)
 
   startWith(Idle, Stop)
