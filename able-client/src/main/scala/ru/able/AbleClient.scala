@@ -31,7 +31,7 @@ object AbleClient extends App with LazyLogging {
   private val modules               = new ModuleInjector(actorSystem, materializer)
   private val orchestrator          = modules.injector.getInstance(classOf[Orchestrator])
   private val backgroundSubstractor = modules.injector.getInstance(classOf[GaussianMixtureBackgroundSubstractor])
-  private val communicationProvider = modules.injector.getInstance(Key.get(classOf[ActorRef], Names.named("TCPCommunication")))
+  private val communicationProvider = modules.injector.getInstance(Key.get(classOf[ActorRef], Names.named("ReactiveTCPBridge")))
   private val eventBus              = modules.injector.getInstance(classOf[TCPEventBus])
 
 //  private val notifier              = modules.injector.getInstance(Key.get(classOf[ActorRef], Names.named("Notifier")))
