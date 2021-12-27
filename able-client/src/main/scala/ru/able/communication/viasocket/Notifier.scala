@@ -35,5 +35,6 @@ class Notifier(communication: Communication) extends Actor with ActorLogging {
             case Right(msg) => log.info(msg)
           }
       )
+    case msg => log.warning(s"NotifierActor (via socket) cannot parse incoming request: $msg!")
   }
 }

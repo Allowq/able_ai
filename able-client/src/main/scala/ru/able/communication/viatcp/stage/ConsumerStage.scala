@@ -20,7 +20,6 @@ class ConsumerStage[Evt, Cmd](resolver: Resolver[Evt])
 
     private var chunkSource: SubSourceOutlet[Evt] = _
     private def chunkSubStreamStarted = chunkSource != null
-//    private def idle = this
 
     def setInitialHandlers(): Unit = setHandlers(eventIn, signalOut, this)
 

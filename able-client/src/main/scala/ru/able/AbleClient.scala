@@ -13,7 +13,7 @@ import ru.able.camera.motiondetector.bgsubtractor.GaussianMixtureBackgroundSubst
 import ru.able.camera.motiondetector.plugin.{MotionDetectorPlugin, StreamerPlugin}
 import ru.able.router.Orchestrator
 import ru.able.camera.framereader.plugin.ShowImagePlugin
-import ru.able.communication.viatcp.TCPEventBus
+import ru.able.communication.viatcp.EventBus
 import ru.able.system.module.ModuleInjector
 
 object AbleClient extends App with LazyLogging {
@@ -31,8 +31,7 @@ object AbleClient extends App with LazyLogging {
   private val modules               = new ModuleInjector(actorSystem, materializer)
   private val orchestrator          = modules.injector.getInstance(classOf[Orchestrator])
   private val backgroundSubstractor = modules.injector.getInstance(classOf[GaussianMixtureBackgroundSubstractor])
-  private val communicationProvider = modules.injector.getInstance(Key.get(classOf[ActorRef], Names.named("ReactiveTCPBridge")))
-  private val eventBus              = modules.injector.getInstance(classOf[TCPEventBus])
+  private val communicationProvider = modules.injector.getInstance(Key.get(classOf[ActorRef], Names.named("ReactiveBridge")))
 
 //  private val notifier              = modules.injector.getInstance(Key.get(classOf[ActorRef], Names.named("Notifier")))
 

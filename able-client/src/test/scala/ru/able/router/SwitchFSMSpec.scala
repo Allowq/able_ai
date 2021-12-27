@@ -53,7 +53,6 @@ class SwitchFSMSpec extends TestKit(ActorSystem(TestActorSystem))
 
         underTest ! Stop
 
-        expectMsg(Ready(Finished))
         underTest.stateName shouldBe Idle
         verify(killSwitch).shutdown()
       }

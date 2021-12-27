@@ -182,10 +182,8 @@ class PluginRegistryFSMSpec
 
         underTest ! Add(plugin)
         underTest ! AdvancedPluginStart(killSwitch, broadcast)
-//        expectMsg(Ready(Ok))
         underTest ! Stop
 
-        expectMsg(Ready(Finished))
         underTest.stateName shouldBe Idle
         verifyZeroInteractions(killSwitch, broadcast)
         verify(plugin).start(AdvancedPluginStart(killSwitch, broadcast))
@@ -199,7 +197,6 @@ class PluginRegistryFSMSpec
 
         underTest ! Add(plugin)
         underTest ! AdvancedPluginStart(killSwitch, broadcast)
-//        expectMsg(Ready(Ok))
         underTest ! Stop
 
         expectMsg(Error(message))

@@ -26,7 +26,7 @@ class StreamerPlugin(notifier: ActorRef)(implicit mat: Materializer) extends Plu
         .via(killSwitch.flow)
         .via(pluginKillSwitch.get.flow)
         .async
-        .map(printPluginId)
+//        .map(printPluginId)
         .groupedWithin(5, 1000 millis)
         .runWith(Sink.foreach(sendNotificationBatch))
     } recover {

@@ -101,8 +101,8 @@ class DetectorStage[Evt, Cmd] extends GraphStage[FanOutShape2[Event[Evt], Signed
         push(outFrame, SignedFrame(uuid, cfs))
       } else {
         Try {
-          val pic = MediaConversion.horizontal(MediaConversion.toMat(cfs.frame))
-          val updatedFrame = MediaConversion.toFrame(drawBoundingBoxes(pic, _detector.detect(pic)))
+          val picMat = MediaConversion.toMat(cfs.frame)
+          val updatedFrame = MediaConversion.toFrame(drawBoundingBoxes(picMat, _detector.detect(picMat)))
           push(outFrame, SignedFrame(uuid, CanvasFrameSpecial(updatedFrame, cfs.date)))
         } recover {
           case ex: Throwable => logger.warn(s"Detecting on frame failed with error: $ex")

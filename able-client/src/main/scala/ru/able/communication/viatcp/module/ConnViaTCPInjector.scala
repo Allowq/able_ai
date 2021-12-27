@@ -3,16 +3,16 @@ package ru.able.communication.viatcp.module
 import akka.actor.ActorRef
 import com.google.inject.AbstractModule
 import com.google.inject.name.Names
-import ru.able.communication.viatcp.stage.bridge.ReactiveTCPBridge
-import ru.able.communication.viatcp.TCPEventBus
+import ru.able.communication.viatcp.stage.bridge.ReactiveBridge
+import ru.able.communication.viatcp.EventBus
 
 import scala.concurrent.ExecutionContext
 
 class ConnViaTCPInjector extends AbstractModule {
   override def configure(): Unit = {
-    bind(classOf[TCPEventBus])
-      .annotatedWith(Names.named(TCPEventBus.providerName))
-      .to(classOf[TCPEventBus])
+    bind(classOf[EventBus])
+      .annotatedWith(Names.named(EventBus.providerName))
+      .to(classOf[EventBus])
       .asEagerSingleton()
 
     bind(classOf[ExecutionContext])
@@ -20,7 +20,7 @@ class ConnViaTCPInjector extends AbstractModule {
       .toProvider(classOf[MessageExecutionContextProvider])
 
     bind(classOf[ActorRef])
-      .annotatedWith(Names.named(ReactiveTCPBridge.ProviderName))
+      .annotatedWith(Names.named(ReactiveBridge.ProviderName))
       .toProvider(classOf[TCPBridgeProvider])
       .asEagerSingleton()
   }

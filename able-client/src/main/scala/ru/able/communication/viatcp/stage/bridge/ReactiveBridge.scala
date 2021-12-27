@@ -10,50 +10,48 @@ import akka.util.ByteString
 import ru.able.camera.framereader.model.CameraFrame
 import ru.able.camera.utils.settings.Settings
 import ru.able.communication.viasocket.{SocketFrame, SocketFrameConverter}
-import ru.able.communication.viatcp.TCPEventBus.RequestClientUUID
-import ru.able.communication.viatcp.protocol.{Command, Event, FrameSeqMessage, MessageFormat, SimpleReply, SingularCommand, SingularErrorEvent, SingularEvent}
-import ru.able.communication.viatcp.TCPEventBus
+import ru.able.communication.viatcp.EventBus
+import ru.able.communication.viatcp.protocol.{Command, Event, FrameSeqMessage, MessageFormat, MessageProtocol, SimpleCommand, SimpleReply, SingularCommand, SingularErrorEvent, SingularEvent, SubscribeOnEvents, UnsubscribeFromEvents}
 import ru.able.communication.viatcp.stage.ClientStage.HostUp
-import ru.able.communication.viatcp.stage.bridge.TCPBridgeBase.{EventException, IncorrectEventType, InputQueueClosed, InputQueueUnavailable}
+import ru.able.communication.viatcp.stage.bridge.BridgeBase.{EventException, IncorrectEventType, InputQueueClosed, InputQueueUnavailable}
 import ru.able.communication.viatcp.stage.{ClientStage, Host, Processor, Resolver}
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.{Failure, Success, Try}
 
-object ReactiveTCPBridge {
-  val ProviderName = "ReactiveTCPBridge"
+object ReactiveBridge {
+  val ProviderName = "ReactiveBridge"
 
   def props[Cmd, Evt](settings: Settings,
                       resolver: Resolver[Evt],
                       protocol: BidiFlow[Cmd, ByteString, ByteString, Evt, Any],
-                      eventBus: TCPEventBus)
+                      eventBus: EventBus)
                      (implicit system: ActorSystem, ec: ExecutionContext) =
   {
-    Props(
-      new ReactiveTCPBridge[Cmd, Evt](
-        settings,
-        resolver,
-        protocol,
-        eventBus)
-    )
+    Props(new ReactiveBridge[Cmd, Evt](settings, resolver, protocol, eventBus))
   }
 }
 
-class ReactiveTCPBridge[Cmd, Evt](settings: Settings,
-                                  resolver: Resolver[Evt],
-                                  protocol: BidiFlow[Cmd, ByteString, ByteString, Evt, Any],
-                                  eventBus: TCPEventBus)
-                                 (implicit system: ActorSystem, ec: ExecutionContext)
-  extends TCPBridgeBase[Cmd, Evt] with Actor with ActorLogging
+class ReactiveBridge[Cmd, Evt](settings: Settings,
+                               resolver: Resolver[Evt],
+                               protocol: BidiFlow[Cmd, ByteString, ByteString, Evt, Any],
+                               eventBus: EventBus)
+                              (implicit system: ActorSystem, ec: ExecutionContext)
+  extends BridgeBase[Cmd, Evt] with Actor with ActorLogging
 {
   protected val clientUUID: UUID = settings.clientUUID
-  protected val eventBusOpt: Option[TCPEventBus] = Some(eventBus)
+  protected val eventBusOpt: Option[EventBus] = Some(eventBus)
   protected val pool: ExecutorService = java.util.concurrent.Executors.newFixedThreadPool(2)
 
   override val eventHandler = Sink.foreach[(Try[Event[Evt]], Context)] {
     case (Failure(msg), context) => context.failure(msg)
     case (Success(evt), context) => {
-      eventBusOpt.map(_.publish[Evt](evt))
+      evt match {
+        case SingularEvent(SimpleCommand(MessageProtocol.UUID, _)) =>
+          ask(SimpleReply(clientUUID.toString))
+        case _ =>
+          eventBusOpt.map(_.publish[Evt](evt))
+      }
       context.success(evt)
     }
   }
@@ -74,7 +72,7 @@ class ReactiveTCPBridge[Cmd, Evt](settings: Settings,
               protocol.reversed
             ))
 
-          TCPBridgeBase.reconnectLogic(
+          BridgeBase.reconnectLogic(
             b,
             b.add(Source.single(HostUp(Host(settings.networkClientHostname, settings.networkClientPort)))),
             s.in2,
@@ -88,29 +86,21 @@ class ReactiveTCPBridge[Cmd, Evt](settings: Settings,
 
   override val input = g.run()
 
-  override def preStart(): Unit = {
-    super.preStart()
-    eventBusOpt.map(_.subscribe(this.self, RequestClientUUID.getClass.getSimpleName))
-  }
+  override def preStart(): Unit = super.preStart()
 
-  override def postStop(): Unit = {
-    eventBusOpt.map(_.unsubscribe(this.self))
-    super.postStop()
-  }
+  override def postStop(): Unit = super.postStop()
 
   override def receive: Receive = {
     case frame: CameraFrame => pool.execute {
       () => ask(FrameSeqMessage(clientUUID, Seq(convertToSocketFrame(frame))))
-      //TODO: you can try to process reply
     }
     case frames: Seq[CameraFrame] => pool.execute {
       () => ask(FrameSeqMessage(clientUUID, frames.map(convertToSocketFrame)))
     }
-    case TCPEventBus.RequestClientUUID                      => ask(SimpleReply(clientUUID.toString))
-    case TCPEventBus.SubscribeTCPEvent(subscriber, event)   => eventBusOpt.map(_.subscribe(subscriber, event))
-    case TCPEventBus.UnsubscribeTCPEvent(subscriber)        => eventBusOpt.map(_.unsubscribe(subscriber))
+    case SubscribeOnEvents(subscriber, event) => eventBusOpt.map(_.subscribe(subscriber, event))
+    case UnsubscribeFromEvents(subscriber)    => eventBusOpt.map(_.unsubscribe(subscriber))
 
-    case msg => log.warning(s"ReactiveTCPCommunicationActor cannot parse incoming request: $msg!")
+    case msg => log.warning(s"ReactiveBridgeActor (via TCP) cannot parse incoming request: $msg!")
   }
 
   protected def ask(command: MessageFormat): Future[Evt] =
@@ -122,7 +112,7 @@ class ReactiveTCPBridge[Cmd, Evt](settings: Settings,
     }(context.dispatcher)
   }
 
-  private def convertToSocketFrame: CameraFrame => SocketFrame = SocketFrameConverter.convertToSocketFrame(_)
+  protected def convertToSocketFrame: CameraFrame => SocketFrame = SocketFrameConverter.convertToSocketFrame(_)
 
   override protected def send(command: Command[Cmd]): Future[Event[Evt]] = {
     val context = Promise[Event[Evt]]()

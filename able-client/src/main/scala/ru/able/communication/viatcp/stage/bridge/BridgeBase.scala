@@ -10,14 +10,14 @@ import akka.util.ByteString
 
 import ru.able.communication.viatcp.protocol.{Command, Event, SingularCommand, SingularErrorEvent, SingularEvent, StreamEvent, StreamingCommand}
 import ru.able.communication.viatcp.stage.ClientStage.{HostEvent, HostUp}
-import ru.able.communication.viatcp.stage.bridge.TCPBridgeBase.{EventException, IncorrectEventType}
+import ru.able.communication.viatcp.stage.bridge.BridgeBase.{EventException, IncorrectEventType}
 import ru.able.communication.viatcp.stage.{ClientStage, Host, Processor, Resolver}
 
 import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.{Failure, Success, Try}
 
-object TCPBridgeBase {
+object BridgeBase {
   val ProviderName = "TCPCommunication"
 
   trait ClientException
@@ -139,7 +139,7 @@ object TCPBridgeBase {
   }
 }
 
-abstract class TCPBridgeBase[Cmd, Evt]()(implicit system: ActorSystem, ec: ExecutionContext)
+abstract class BridgeBase[Cmd, Evt]()(implicit system: ActorSystem, ec: ExecutionContext)
 {
   type Context = Promise[Event[Evt]]
 

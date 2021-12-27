@@ -31,7 +31,7 @@ class MotionDetectorPlugin(backgroundSubstractor: BackgroundSubstractor, notifie
         .via(killSwitch.flow)
         .via(pluginKillSwitch.get.flow)
         .async
-        .map(printPluginId)
+//        .map(printPluginId)
         .via(new BackgroundSubstractorStage(backgroundSubstractor))
         .via(Flow[MotionDetectFrame].filter(reachedThreshold))
         .via(Flow[MotionDetectFrame].map(_.originalFrame))
