@@ -1,9 +1,5 @@
 # Able AI Platform #
 
-Welcome to able_ai_platform!
-
-You can clone the repository and run Able Prototype using SBT.
-
 ## License ##
 
 This code is open source software licensed under the
