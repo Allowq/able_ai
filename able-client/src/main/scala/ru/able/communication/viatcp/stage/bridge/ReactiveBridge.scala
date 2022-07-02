@@ -86,10 +86,6 @@ class ReactiveBridge[Cmd, Evt](settings: Settings,
 
   override val input = g.run()
 
-  override def preStart(): Unit = super.preStart()
-
-  override def postStop(): Unit = super.postStop()
-
   override def receive: Receive = {
     case frame: CameraFrame => pool.execute {
       () => ask(FrameSeqMessage(clientUUID, Seq(convertToSocketFrame(frame))))

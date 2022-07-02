@@ -2,7 +2,7 @@ package ru.able
 
 import java.awt.event.WindowAdapter
 
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.ActorSystem
 import akka.stream.Materializer
 import com.google.inject.Key
 import com.google.inject.name.Names
@@ -13,7 +13,7 @@ import ru.able.camera.motiondetector.bgsubtractor.GaussianMixtureBackgroundSubst
 import ru.able.camera.motiondetector.plugin.{MotionDetectorPlugin, StreamerPlugin}
 import ru.able.router.Orchestrator
 import ru.able.camera.framereader.plugin.ShowImagePlugin
-import ru.able.communication.viatcp.EventBus
+import ru.able.camera.objectdetector.ObjectDetectorPlugin
 import ru.able.system.module.ModuleInjector
 
 object AbleClient extends App with LazyLogging {
@@ -30,10 +30,6 @@ object AbleClient extends App with LazyLogging {
 
   private val modules               = new ModuleInjector(actorSystem, materializer)
   private val orchestrator          = modules.injector.getInstance(classOf[Orchestrator])
-  private val backgroundSubstractor = modules.injector.getInstance(classOf[GaussianMixtureBackgroundSubstractor])
-  private val communicationProvider = modules.injector.getInstance(Key.get(classOf[ActorRef], Names.named("ReactiveBridge")))
-
-//  private val notifier              = modules.injector.getInstance(Key.get(classOf[ActorRef], Names.named("Notifier")))
 
   lazy val shutdown: Unit = {
     logger.info(s"AbleClient shutdown.")
@@ -41,16 +37,21 @@ object AbleClient extends App with LazyLogging {
   }
 
   val canvas = createCanvas(shutdown)
+//  val showImagePlugin = new ShowImagePlugin(canvas)
+//  orchestrator.addPlugin(showImagePlugin)
 
-  val showImagePlugin = new ShowImagePlugin(canvas)
+//  private val notifier              = modules.injector.getInstance(Key.get(classOf[ActorRef], Names.named("Notifier")))
 //  val streamerPlugin = new StreamerPlugin(notifier)(materializer)
 //  val streamerPlugin = new StreamerPlugin(networkClient)(materializer)
-//  val motionDetect = new MotionDetectorPlugin(null, backgroundSubstractor, notifier)
-  val motionDetect = new MotionDetectorPlugin(backgroundSubstractor, communicationProvider)
-
 //  orchestator.addPlugin(streamerPlugin)
-  orchestrator.addPlugin(showImagePlugin)
-  orchestrator.addPlugin(motionDetect)
+
+//  private val backgroundSubstractor = modules.injector.getInstance(classOf[GaussianMixtureBackgroundSubstractor])
+//  private val communicationProvider = modules.injector.getInstance(Key.get(classOf[ActorRef], Names.named("ReactiveBridge")))
+//  val motionDetect = new MotionDetectorPlugin(backgroundSubstractor, communicationProvider)
+//  orchestrator.addPlugin(motionDetect)
+
+  val objectDetector = new ObjectDetectorPlugin(canvas)
+  orchestrator.addPlugin(objectDetector)
 
   startStreaming(orchestrator)
 

@@ -3,17 +3,17 @@ package ru.able.camera.motiondetector.plugin
 import akka.actor.ActorRef
 import akka.stream.scaladsl.Flow
 import akka.stream.scaladsl.Sink
-import akka.stream.{KillSwitches, Materializer, SharedKillSwitch}
+import akka.stream.{KillSwitches, Materializer, OverflowStrategy, SharedKillSwitch, ThrottleMode}
 import com.typesafe.scalalogging.LazyLogging
 import org.bytedeco.javacpp.opencv_core
 import org.bytedeco.javacpp.opencv_core._
 import org.bytedeco.javacpp.opencv_imgproc._
-
 import ru.able.camera.framereader.model.{CameraFrame, MotionDetectFrame}
 import ru.able.camera.motiondetector.bgsubtractor.BackgroundSubstractor
 import ru.able.camera.motiondetector.plugin.stage.BackgroundSubstractorStage
 import ru.able.router.model.{AdvancedPluginStart, Plugin}
 
+import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
 
 class MotionDetectorPlugin(backgroundSubstractor: BackgroundSubstractor, notifier: ActorRef)
@@ -35,6 +35,8 @@ class MotionDetectorPlugin(backgroundSubstractor: BackgroundSubstractor, notifie
         .via(new BackgroundSubstractorStage(backgroundSubstractor))
         .via(Flow[MotionDetectFrame].filter(reachedThreshold))
         .via(Flow[MotionDetectFrame].map(_.originalFrame))
+        .buffer(1, OverflowStrategy.dropHead)
+        .throttle(1, FiniteDuration(1, "seconds"), 1, ThrottleMode.shaping)
         .runWith(Sink.foreach(sendNotification))
     } recover {
       case e: Exception => logger.error(e.getMessage, e)
@@ -57,7 +59,7 @@ class MotionDetectorPlugin(backgroundSubstractor: BackgroundSubstractor, notifie
     CameraFrame(imgMat, cf.date)
   }
 
-  private def reachedThreshold(f: MotionDetectFrame): Boolean = cvCountNonZero(f.maskedImg) > 5000
+  private def reachedThreshold(f: MotionDetectFrame): Boolean = cvCountNonZero(f.maskedImg) > 100
 
   private def sendNotification(f: CameraFrame): Unit = notifier ! f
 }
