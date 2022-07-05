@@ -93,6 +93,9 @@ class ReactiveBridge[Cmd, Evt](settings: Settings,
     case frames: Seq[CameraFrame] => pool.execute {
       () => ask(FrameSeqMessage(clientUUID, frames.map(convertToSocketFrame)))
     }
+    case command: SimpleCommand => pool.execute( {
+      () => ask(command)
+    })
     case SubscribeOnEvents(subscriber, event) => eventBusOpt.map(_.subscribe(subscriber, event))
     case UnsubscribeFromEvents(subscriber)    => eventBusOpt.map(_.unsubscribe(subscriber))
 

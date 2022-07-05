@@ -9,6 +9,7 @@ import ru.able.camera.utils.settings.module.SettingsInjector
 import ru.able.communication.viasocket.module.ConnViaSocketInjector
 import ru.able.communication.viatcp.module.ConnViaTCPInjector
 import ru.able.router.module.RouterInjector
+import ru.able.service.ObjectDetector.module.ObjectProcessorInjector
 
 class ModuleInjector(system: ActorSystem, materializer: Materializer) {
   val injector = Guice.createInjector(
@@ -18,6 +19,7 @@ class ModuleInjector(system: ActorSystem, materializer: Materializer) {
     new BackgroundSubstractorInjector(),
     new CameraReaderInjector(),
     new RouterInjector(),
-    new ConnViaTCPInjector()
+    new ConnViaTCPInjector(),
+    new ObjectProcessorInjector()
   )
 }

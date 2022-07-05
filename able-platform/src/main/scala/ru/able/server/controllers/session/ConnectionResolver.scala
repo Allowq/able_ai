@@ -33,7 +33,8 @@ object ConnectionResolver {
 }
 
 final class ConnectionResolver(_sessionKeeperActor: ActorRef = Actor.noSender,
-                               _gatewayActor: ActorRef = Actor.noSender) extends Actor with ActorLogging
+                               _gatewayActor: ActorRef = Actor.noSender)
+  extends Actor with ActorLogging
 {
   implicit val askActorTimeout = Timeout(Duration(1, TimeUnit.SECONDS))
 
@@ -46,6 +47,7 @@ final class ConnectionResolver(_sessionKeeperActor: ActorRef = Actor.noSender,
     (_gatewayActor ? RunCustomGateway(sessionID, connection)).mapTo[GatewayResponse].onComplete {
       case Success(GatewayRouted(publisher)) =>
         publisher ! SingularCommand(SimpleCommand(MessageProtocol.UUID, ""))
+        log.info(s"Checking device message sent. Waiting for reply from ${connection.remoteAddress}")
       case Failure(ex) =>
         log.warning(s"Publisher resolving for connection: ${connection.remoteAddress} failed with exception: $ex")
     }(context.dispatcher)

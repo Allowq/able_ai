@@ -7,9 +7,9 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
+import akka.pattern.ask
 import akka.stream.scaladsl.Tcp
 import akka.util.Timeout
-import akka.pattern.ask
 
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
@@ -30,14 +30,14 @@ object SessionKeeper {
 
 final class SessionKeeper private extends Actor with ActorLogging {
   // TODO: Define FSM for suspending status on DeviseController initialize timeout
-  implicit val askTimeout = Timeout(Duration(5, TimeUnit.SECONDS))
+  implicit val askTimeout = Timeout(Duration(60, TimeUnit.SECONDS))
   implicit val system: ActorSystem = context.system
   implicit val ec: ExecutionContext = context.dispatcher
 
   private val _sessionConnections = new mutable.HashMap[InetSocketAddress, SessionObj]
   private val _gatewayActor = Gateway(self)
 
-  private lazy val _connectionResolver = ConnectionResolver.createActorPool(self, _gatewayActor)
+  private val _connectionResolver = ConnectionResolver.createActorPool(self, _gatewayActor)
 
   override def receive: Receive = {
     case NewConnection(conn)        => processNewConnection(conn)
@@ -96,9 +96,13 @@ final class SessionKeeper private extends Actor with ActorLogging {
 
     context.system.scheduler.scheduleOnce(askTimeout.duration) {
       _sessionConnections.get(connection.remoteAddress) match {
-        case Some(sessionObj) => if (sessionObj.data.deviceID.uuid.isEmpty) {
-          log.info(s"Cannot resolve host: ${connection.remoteAddress}. Session with ID: $sessionID will be remove.")
-          resetConnection(connection.remoteAddress)
+        case Some(sessionObj) => {
+          if (sessionObj.data.deviceID.uuid.isEmpty) {
+            log.info(s"Cannot resolve host: ${connection.remoteAddress}. Session with ID: $sessionID will be remove.")
+            resetConnection(connection.remoteAddress)
+          } else {
+            log.info(s"Host ${connection.remoteAddress} is resolving. Session ID: $sessionID registered.")
+          }
         }
         case _ => log.warning(s"Session was removed during host (address: ${connection.remoteAddress}) resolving.")
       }
