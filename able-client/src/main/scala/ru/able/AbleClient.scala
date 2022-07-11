@@ -13,7 +13,6 @@ import ru.able.camera.motiondetector.bgsubtractor.GaussianMixtureBackgroundSubst
 import ru.able.camera.motiondetector.plugin.{MotionDetectorPlugin, StreamerPlugin}
 import ru.able.router.Orchestrator
 import ru.able.camera.framereader.plugin.ShowImagePlugin
-import ru.able.communication.viatcp.protocol.SimpleCommand
 import ru.able.service.ObjectDetector.ObjectProcessor
 import ru.able.system.module.ModuleInjector
 

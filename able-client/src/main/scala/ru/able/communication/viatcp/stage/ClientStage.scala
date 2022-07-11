@@ -245,8 +245,10 @@ class ClientStage[Context, Cmd, Evt](connectionsPerHost: Int,
 
       def close(cause: Option[Throwable]): Unit = {
         val exception = cause match {
-          case Some(cause)  => ConnectionClosedWithReasonException(s"Failure to process request to $host at connection $connectionId", cause)
-          case None         => ConnectionClosedWithoutReasonException(s"Failure to process request to $host connection $connectionId")
+          case Some(cause)  =>
+            ConnectionClosedWithReasonException(s"Failure to process request to $host at connection $connectionId", cause)
+          case None         =>
+            ConnectionClosedWithoutReasonException(s"Failure to process request to $host connection $connectionId")
         }
 
         contexts.dequeueAll(_ ⇒ true).foreach(context ⇒ {
@@ -275,15 +277,14 @@ class ClientStage[Context, Cmd, Evt](connectionsPerHost: Int,
           override def onDownstreamFinish(cause: Throwable): Unit = {}
         })
 
-        RunnableGraph.fromGraph(GraphDSL.create() { implicit b ⇒
+        RunnableGraph.fromGraph(GraphDSL.create() { implicit b =>
           import GraphDSL.Implicits._
 
           val pipeline: FlowShape[Command[Cmd], Event[Evt]] =
             b.add(processor
               .flow
               .atop(protocol.reversed)
-              .join(Tcp().outgoingConnection(host.host, host.port))
-          )
+              .join(Tcp().outgoingConnection(host.host, host.port)))
 
           connectionCommandOut.source ~> pipeline.in
           pipeline.out ~> connectionEventIn.sink

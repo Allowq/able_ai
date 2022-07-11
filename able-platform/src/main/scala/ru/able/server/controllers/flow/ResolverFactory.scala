@@ -29,7 +29,7 @@ object ResolverFactory {
   private def processSimpleCommand(command: SimpleCommand)(implicit ec: ExecutionContext, mat: Materializer): Action = {
     command.cmd match {
       case ECHO => ProducerAction.Signal { _: SimpleCommand => Future(SimpleReply(command.payload)) }
-      case UUID => ProducerAction.Signal { _: SimpleCommand => Future(SimpleReply("ef52e009-9b9c-4dfd-8e98-af33d900d431")) }
+//      case UUID => ProducerAction.Signal { _: SimpleCommand => Future(SimpleReply("ef52e009-9b9c-4dfd-8e98-af33d900d431")) }
       case CHECK_PING => ProducerAction.Signal { _: SimpleCommand => Future(SimpleReply("PONG")) }
       case TOTAL_CHUNK_SIZE => ProducerAction.ConsumeStream { x: Source[SimpleStreamChunk, Any] =>
         x

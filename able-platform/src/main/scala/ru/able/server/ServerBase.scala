@@ -3,7 +3,7 @@ package ru.able.server
 import akka.Done
 import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.Materializer
-import akka.stream.scaladsl.{Keep, Sink, Tcp}
+import akka.stream.scaladsl.{Sink, Tcp}
 import akka.util.Timeout
 import com.typesafe.scalalogging.LazyLogging
 import ru.able.server.controllers.session.model.KeeperModel.NewConnection
@@ -27,7 +27,7 @@ final class ServerBase[Cmd, Evt](val interface: String = "127.0.0.1", val port: 
       }
 
     val connections = Tcp().bind(interface, port, halfClose = false)
-    val binding = connections.watchTermination()(Keep.left).to(handler).run()
+    val binding = connections.to(handler).run()
 
     binding.onComplete {
       case Success(addr) => logger.info(s"Server started, listening on: ${addr.localAddress}")

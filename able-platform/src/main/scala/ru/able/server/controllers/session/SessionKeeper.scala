@@ -7,7 +7,6 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
-import akka.pattern.ask
 import akka.stream.scaladsl.Tcp
 import akka.util.Timeout
 

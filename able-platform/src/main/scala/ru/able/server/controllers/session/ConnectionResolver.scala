@@ -11,9 +11,8 @@ import ru.able.server.controllers.flow.protocol.{MessageProtocol, SingularComman
 import ru.able.server.controllers.gateway.model.GatewayModel.{GatewayResponse, GatewayRouted, RunCustomGateway}
 import ru.able.server.controllers.session.model.KeeperModel.{ResolveConnection, SessionID}
 
-import scala.concurrent.Await
 import scala.concurrent.duration.Duration
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 object ConnectionResolver {
   def apply()(implicit system: ActorSystem): ActorRef =
