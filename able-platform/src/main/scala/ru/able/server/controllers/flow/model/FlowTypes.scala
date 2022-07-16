@@ -13,5 +13,6 @@ object FlowTypes {
   case object BasicFT extends FlowType
   case object ExtendedFT extends FlowType
 
-  type ControlledFlow = Tuple2[ActorRef, Flow[ByteString, ByteString, Future[Done]]]
+  type SimplePublishFlow = Tuple2[ActorRef, Flow[ByteString, ByteString, Future[Done]]]
+  type ControlledFlow = Tuple3[ActorRef, ActorRef, Flow[ByteString, ByteString, Future[Done]]]
 }

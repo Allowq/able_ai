@@ -13,8 +13,8 @@ import akka.util.Timeout
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
-import ru.able.server.controllers.gateway.Gateway
-import ru.able.server.controllers.session.ConnectionResolver
+import ru.able.server.controllers.gateway.BasicGateway
+import ru.able.server.controllers.gateway.model.GatewayModel.{ActivateGateway, RunCustomGateway}
 import ru.able.server.controllers.session.model.KeeperModel.{ActiveSession, CheckSessionState, DeviceID, ExpiredSession, InitSession, NewConnection, ResetConnection, ResolveConnection, ResolveDeviceID, SessionData, SessionID, SessionObj}
 
 object SessionKeeper {
@@ -34,9 +34,7 @@ final class SessionKeeper private extends Actor with ActorLogging {
   implicit val ec: ExecutionContext = context.dispatcher
 
   private val _sessionConnections = new mutable.HashMap[InetSocketAddress, SessionObj]
-  private val _gatewayActor = Gateway(self)
-
-  private val _connectionResolver = ConnectionResolver.createActorPool(self, _gatewayActor)
+  private val _gatewayActor = BasicGateway(self)
 
   override def receive: Receive = {
     case NewConnection(conn)        => processNewConnection(conn)
@@ -91,7 +89,7 @@ final class SessionKeeper private extends Actor with ActorLogging {
   }
 
   private def resolveDevice(connection: Tcp.IncomingConnection, sessionID: SessionID): Unit = {
-    _connectionResolver ! ResolveConnection(connection, sessionID)
+    _gatewayActor ! RunCustomGateway(sessionID, connection)
 
     context.system.scheduler.scheduleOnce(askTimeout.duration) {
       _sessionConnections.get(connection.remoteAddress) match {
@@ -99,8 +97,6 @@ final class SessionKeeper private extends Actor with ActorLogging {
           if (sessionObj.data.deviceID.uuid.isEmpty) {
             log.info(s"Cannot resolve host: ${connection.remoteAddress}. Session with ID: $sessionID will be remove.")
             resetConnection(connection.remoteAddress)
-          } else {
-            log.info(s"Host ${connection.remoteAddress} is resolving. Session ID: $sessionID registered.")
           }
         }
         case _ => log.warning(s"Session was removed during host (address: ${connection.remoteAddress}) resolving.")
@@ -121,6 +117,7 @@ final class SessionKeeper private extends Actor with ActorLogging {
             timestamp = Timestamp.from(Instant.now())
           ))
         )
+        _gatewayActor ! ActivateGateway(session.id)
         log.info(s"Resolving host: $rAddr done. DeviceID is: $id.")
       }
       case (None, Some(id)) =>

@@ -11,12 +11,14 @@ object GatewayModel {
   sealed trait GatewayRequest
   case class RunBasicGateway(sessionID: SessionID, connection: Tcp.IncomingConnection) extends GatewayRequest
   case class RunCustomGateway(sessionID: SessionID, connection: Tcp.IncomingConnection) extends GatewayRequest
+  case class ActivateGateway(sessionID: SessionID) extends GatewayRequest
 
   sealed trait GatewayResponse
   case class GatewayRouted(publisher: ActorRef) extends GatewayResponse
 
   case class GatewayObj(connection: Tcp.IncomingConnection,
                         flowType: FlowType,
+                        checkoutHandler: ActorRef,
                         commandPublisher: ActorRef,
                         killSwitch: UniqueKillSwitch)
 }

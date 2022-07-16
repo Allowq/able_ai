@@ -18,7 +18,6 @@ object KeeperModel {
 
   sealed trait SessionState
   case object InitSession extends SessionState
-  case object CheckSession extends SessionState
   case object ActiveSession extends SessionState
   case object ExpiredSession extends SessionState
 
