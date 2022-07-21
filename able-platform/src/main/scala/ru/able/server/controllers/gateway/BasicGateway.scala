@@ -15,7 +15,7 @@ import ru.able.server.controllers.flow.FlowFactory
 import ru.able.server.controllers.flow.model.FlowTypes.{BasicFT, ExtendedFT}
 import ru.able.server.controllers.flow.model.SimpleCommand
 import ru.able.server.controllers.flow.protocol.{MessageProtocol, SingularCommand}
-import ru.able.server.controllers.flow.stages.CheckoutStage.SetActiveSession
+import ru.able.server.controllers.flow.stages.CheckoutStage
 import ru.able.server.controllers.gateway.model.GatewayModel.{ActivateGateway, GatewayObj, RunBasicGateway, RunCustomGateway}
 import ru.able.server.controllers.session.model.KeeperModel.{ResetConnection, SessionID}
 
@@ -50,7 +50,10 @@ private [gateway] class BasicGateway(_sessionKeeperActor: ActorRef) extends Acto
   protected def activateGateway(sessionID: SessionID): Unit = {
     _gateways.get(sessionID) match {
       case Some(gatewayObj) =>
-        if (gatewayObj.checkoutHandler != ActorRef.noSender) gatewayObj.checkoutHandler ! SetActiveSession
+        if (gatewayObj.checkoutHandler != ActorRef.noSender) {
+          gatewayObj.checkoutHandler ! CheckoutStage.SetActiveSession
+          gatewayObj.commandPublisher ! SingularCommand(SimpleCommand(MessageProtocol.REGISTRATION_SUCCESS, "ABLE_AI_PLATFORM"))
+        }
       case None =>
         log.warning(s"Cannot activate Gateway with ID: ${sessionID.uuid}, because Gateway not found!")
     }

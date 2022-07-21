@@ -26,14 +26,14 @@ object Processor {
       GraphDSL.create() { implicit b ⇒
         import GraphDSL.Implicits._
 
-        val producer = b add producerStage
-        val consumer = b add consumerStage
-
+        val producer = b.add(producerStage)
+        val consumer = b.add(consumerStage)
         val commandIn = b add Flow[Command[Cmd]]
 
         if (shouldReact) {
-          val fa = b add functionApply
-          val merge = b add Merge[Command[Cmd]](2)
+          val fa = b.add(functionApply)
+          val merge = b.add(Merge[Command[Cmd]](2))
+
           commandIn           ~> merge.in(0)
           consumer.out0 ~> fa ~> merge.in(1)
                                  merge.out ~> producer

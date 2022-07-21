@@ -20,6 +20,7 @@ object MessageProtocol {
   val UUID = 4
   val LABEL_MAP = 5
   val CHECK_PING = 99
+  val REGISTRATION_SUCCESS = 100
 
   val maximumMessageLength: Int = 4 << 20
 

@@ -40,7 +40,6 @@ class ReactiveBridge[Cmd, Evt](settings: Settings,
   extends BridgeBase[Cmd, Evt] with Actor with ActorLogging
 {
   protected val clientUUID: UUID = settings.clientUUID
-  protected val eventBusOpt: Option[EventBus] = Some(eventBus)
   protected val pool: ExecutorService = java.util.concurrent.Executors.newFixedThreadPool(2)
 
   override val eventHandler = Sink.foreach[(Try[Event[Evt]], Context)] {
@@ -50,7 +49,7 @@ class ReactiveBridge[Cmd, Evt](settings: Settings,
         case SingularEvent(SimpleCommand(MessageProtocol.UUID, _)) =>
           ask(SimpleReply(clientUUID.toString))
         case _ =>
-          eventBusOpt.map(_.publish[Evt](evt))
+          eventBus.publish[Evt](evt)
       }
       context.success(evt)
     }
@@ -93,13 +92,15 @@ class ReactiveBridge[Cmd, Evt](settings: Settings,
     case frames: Seq[CameraFrame] => pool.execute {
       () => ask(FrameSeqMessage(clientUUID, frames.map(convertToSocketFrame)))
     }
-    case command: SimpleCommand => pool.execute( {
+    case command: SimpleCommand => pool.execute {
       () => ask(command)
-    })
-    case SubscribeOnEvents(subscriber, event) => eventBusOpt.map(_.subscribe(subscriber, event))
-    case UnsubscribeFromEvents(subscriber)    => eventBusOpt.map(_.unsubscribe(subscriber))
-
-    case msg => log.warning(s"ReactiveBridgeActor (via TCP) cannot parse incoming request: $msg!")
+    }
+    case SubscribeOnEvents(subscriber, event) =>
+      eventBus.subscribe(subscriber, event)
+    case UnsubscribeFromEvents(subscriber) =>
+      eventBus.unsubscribe(subscriber)
+    case msg =>
+      log.warning(s"ReactiveBridgeActor (via TCP) cannot parse incoming request: $msg!")
   }
 
   protected def ask(command: MessageFormat): Future[Evt] =

@@ -16,14 +16,14 @@ object FrameSeqHandler extends Resolver[MessageFormat] {
   {
     case FrameSeqMessage(uuid, socketFrames) => {
       println(socketFrames.foreach(_.date))
-      ProducerAction.Signal { x: SimpleCommand => Future(SimpleReply("That's OK!")) }
+      ProducerAction.Signal { _: SimpleCommand => Future(SimpleReply("That's OK!")) }
     }
-    case SimpleStreamChunk(x)               => if (x.length > 0) ConsumerAction.ConsumeStreamChunk else ConsumerAction.EndStream
-    case x: SimpleError                     => ConsumerAction.AcceptError
-    case x: SimpleReply                     => ConsumerAction.AcceptSignal
-    case cmd: SimpleCommand                 => processSimpleCommands(cmd)
-    case LabelMapMessage(payload)           => println(s"LabelMap received: $payload"); ConsumerAction.Ignore
-    case x                                  => println("Unhandled: " + x); ConsumerAction.Ignore
+    case cmd: SimpleCommand   => processSimpleCommands(cmd)
+    case SimpleStreamChunk(x) => if (x.length > 0) ConsumerAction.ConsumeStreamChunk else ConsumerAction.EndStream
+    case _: SimpleReply       => ConsumerAction.AcceptSignal
+    case _: LabelMapMessage   => ConsumerAction.AcceptSignal
+    case _: SimpleError       => ConsumerAction.AcceptError
+    case x                    => println("Unhandled: " + x); ConsumerAction.Ignore
   }
 
   private def processSimpleCommands(command: SimpleCommand): Action = {
@@ -31,6 +31,8 @@ object FrameSeqHandler extends Resolver[MessageFormat] {
       case ECHO => println("ECHO: " + command.payload); ConsumerAction.Ignore
       case UUID => ConsumerAction.AcceptSignal
       case CHECK_PING => println("PING_ACCEPTED: " + command.payload); ConsumerAction.Ignore
+      case REGISTRATION_SUCCESS => ConsumerAction.AcceptSignal
+      case _ => ConsumerAction.Ignore
     }
   }
 }

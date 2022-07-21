@@ -30,7 +30,6 @@ object AbleClient extends App with LazyLogging {
 
   private val modules               = new ModuleInjector(actorSystem, materializer)
   private val orchestrator          = modules.injector.getInstance(classOf[Orchestrator])
-  private val objectProcessor       = modules.injector.getInstance(Key.get(classOf[ActorRef], Names.named(ObjectProcessor.ProviderName)))
 
   lazy val shutdown: Unit = {
     logger.info(s"AbleClient shutdown.")
@@ -49,10 +48,10 @@ object AbleClient extends App with LazyLogging {
   private val backgroundSubstractor = modules.injector.getInstance(classOf[GaussianMixtureBackgroundSubstractor])
   private val communicationProvider = modules.injector.getInstance(Key.get(classOf[ActorRef], Names.named("ReactiveBridge")))
   val motionDetect = new MotionDetectorPlugin(backgroundSubstractor, communicationProvider)
-
   orchestrator.addPlugin(motionDetect)
-
   startStreaming(orchestrator)
+
+//  private val objectDetector = modules.injector.getInstance(Key.get(classOf[ActorRef], Names.named("ObjectProcessor")))
 
   private def startStreaming(orchestrator: Orchestrator) = {
     orchestrator.start()
