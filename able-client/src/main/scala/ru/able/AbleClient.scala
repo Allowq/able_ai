@@ -51,8 +51,6 @@ object AbleClient extends App with LazyLogging {
   orchestrator.addPlugin(motionDetect)
   startStreaming(orchestrator)
 
-//  private val objectDetector = modules.injector.getInstance(Key.get(classOf[ActorRef], Names.named("ObjectProcessor")))
-
   private def startStreaming(orchestrator: Orchestrator) = {
     orchestrator.start()
     logger.info("Video streaming started.")

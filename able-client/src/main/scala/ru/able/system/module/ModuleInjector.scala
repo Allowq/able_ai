@@ -14,12 +14,12 @@ import ru.able.service.ObjectDetector.module.ObjectProcessorInjector
 class ModuleInjector(system: ActorSystem, materializer: Materializer) {
   val injector = Guice.createInjector(
     new SystemInitializerInjector(system, materializer),
-    new ConnViaSocketInjector(),
+//    new ConnViaSocketInjector(),
     new SettingsInjector(),
     new BackgroundSubstractorInjector(),
     new CameraReaderInjector(),
     new RouterInjector(),
     new ConnViaTCPInjector(),
-    new ObjectProcessorInjector()
+//    new ObjectProcessorInjector()
   )
 }

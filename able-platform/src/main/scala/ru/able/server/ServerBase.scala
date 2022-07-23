@@ -4,26 +4,22 @@ import akka.Done
 import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Tcp}
-import akka.util.Timeout
 import com.typesafe.scalalogging.LazyLogging
-import ru.able.server.controllers.session.model.KeeperModel.NewConnection
+import ru.able.server.controllers.session.model.KeeperModel.{NewDeviceConnection, NewNotifierConnection}
 import ru.able.services.session.SessionKeeper
 
-import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 final class ServerBase[Cmd, Evt](val interface: String = "127.0.0.1", val port: Int = 9999)
                                 (implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext) extends LazyLogging
 {
-  implicit lazy val defaultAskTimeout = Timeout(1 seconds)
-
   private val _sessionKeeperActor: ActorRef = SessionKeeper()
 
   private def setupConnection: Unit = {
     val handler: Sink[Tcp.IncomingConnection, Future[Done]] =
       Sink.foreach[Tcp.IncomingConnection] { conn =>
-        _sessionKeeperActor ! NewConnection(conn)
+        _sessionKeeperActor ! NewDeviceConnection(conn)
       }
 
     val connections = Tcp().bind(interface, port, halfClose = false)

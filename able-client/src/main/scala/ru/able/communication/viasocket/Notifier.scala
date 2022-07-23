@@ -22,9 +22,7 @@ class Notifier(communication: Communication) extends Actor with ActorLogging {
         () =>
           communication.sendBatch(Seq(frame)) match {
             case Left(msg)  => log.warning(msg)
-            case Right(msg) => {
-              log.info(msg)
-            }
+            case Right(msg) => log.info(msg)
         }
       )
     case frames: Seq[CameraFrame] =>

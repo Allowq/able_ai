@@ -14,8 +14,8 @@ import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
 import ru.able.server.controllers.gateway.BasicGateway
-import ru.able.server.controllers.gateway.model.GatewayModel.{ActivateGateway, RunCustomGateway}
-import ru.able.server.controllers.session.model.KeeperModel.{ActiveSession, CheckSessionState, DeviceID, ExpiredSession, InitSession, NewConnection, ResetConnection, ResolveConnection, ResolveDeviceID, SessionData, SessionID, SessionObj}
+import ru.able.server.controllers.gateway.model.GatewayModel.{ActivateGateway, RunBasicGateway, RunCustomGateway}
+import ru.able.server.controllers.session.model.KeeperModel.{ActiveSession, CheckSessionState, DeviceID, ExpiredSession, InitSession, NewDeviceConnection, NewNotifierConnection, ResetConnection, ResolveDeviceID, SessionData, SessionID, SessionObj}
 
 object SessionKeeper {
   def apply()(implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
@@ -37,11 +37,12 @@ final class SessionKeeper private extends Actor with ActorLogging {
   private val _gatewayActor = BasicGateway(self)
 
   override def receive: Receive = {
-    case NewConnection(conn)        => processNewConnection(conn)
-    case ResetConnection(rAddr)     => resetConnection(rAddr)
-    case ResolveDeviceID(conn, id)  => updateDeviceID(conn, id)
-    case CheckSessionState(rAddr)   => checkSessionState(rAddr, sender())
-    case msg                        => log.warning(s"SessionKeeper received unrecognized message: $msg")
+    case NewDeviceConnection(conn)   => processNewDeviceConnection(conn)
+    case NewNotifierConnection(conn) => processNewDeviceConnection(conn, true)
+    case ResetConnection(rAddr)      => resetConnection(rAddr)
+    case ResolveDeviceID(conn, id)   => updateDeviceID(conn, id)
+    case CheckSessionState(rAddr)    => checkSessionState(rAddr, sender())
+    case msg                         => log.warning(s"SessionKeeper received unrecognized message: $msg")
   }
 
   private def createNewSession(conn: Tcp.IncomingConnection): SessionID = {
@@ -61,7 +62,7 @@ final class SessionKeeper private extends Actor with ActorLogging {
     }
   }
 
-  private def processNewConnection(conn: Tcp.IncomingConnection): Unit = {
+  private def processNewDeviceConnection(conn: Tcp.IncomingConnection, isBasicNotifier: Boolean = false): Unit = {
     _sessionConnections.get(conn.remoteAddress) match {
       case Some(session) => {
         log.warning(s"Connection from host: ${conn.remoteAddress} has been established before! Check session with ID: ${session.id}")
@@ -70,7 +71,10 @@ final class SessionKeeper private extends Actor with ActorLogging {
       case None => {
         val newSessionID: SessionID = createNewSession(conn)
         log.info(s"Connection with host: ${conn.remoteAddress} established. New session with ID: $newSessionID registered.")
-        resolveDevice(conn, newSessionID)
+        if (isBasicNotifier)
+          makeSimpleConnection(conn, newSessionID)
+        else
+          resolveDevice(conn, newSessionID)
       }
     }
   }
@@ -103,6 +107,9 @@ final class SessionKeeper private extends Actor with ActorLogging {
       }
     }
   }
+
+  private def makeSimpleConnection(connection: Tcp.IncomingConnection, sessionID: SessionID): Unit =
+    _gatewayActor ! RunBasicGateway(sessionID, connection)
 
   private def updateDeviceID(rAddr: InetSocketAddress, id: DeviceID): Unit = {
     val sessionOpt: Option[SessionObj] = _sessionConnections.get(rAddr)

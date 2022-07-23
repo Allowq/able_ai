@@ -29,12 +29,8 @@ final class ObjectProcessor(reactiveBridge: ActorRef, eventBus: EventBus) extend
   }
 
   override def receive: Receive = {
-    case _: DeviceRegistered =>
-      reactiveBridge ! SimpleCommand(MessageProtocol.LABEL_MAP, "")
-    case lm: LabelMap => {
-      if(_labelMapOpt.isEmpty) _labelMapOpt = Some(lm)
-      log.info(lm.toString)
-    }
-    case msg => log.warning(s"ObjectProcessorActor cannot parse incoming request: $msg!")
+    case _: DeviceRegistered  => reactiveBridge ! SimpleCommand(MessageProtocol.LABEL_MAP, "")
+    case lm: LabelMap         => if(_labelMapOpt.isEmpty) _labelMapOpt = Some(lm)
+    case msg                  => log.warning(s"ObjectProcessorActor cannot parse incoming request: $msg!")
   }
 }

@@ -9,7 +9,8 @@ import akka.stream.scaladsl.Tcp
 object KeeperModel {
 
   sealed trait SessionKeeperRequest
-  case class NewConnection(conn: Tcp.IncomingConnection) extends SessionKeeperRequest
+  case class NewDeviceConnection(conn: Tcp.IncomingConnection) extends SessionKeeperRequest
+  case class NewNotifierConnection(conn: Tcp.IncomingConnection) extends SessionKeeperRequest
   case class ResetConnection(rAddr: InetSocketAddress) extends SessionKeeperRequest
   case class ResolveDeviceID(rAddr: InetSocketAddress, deviceID: DeviceID) extends SessionKeeperRequest
   case class CheckSessionState(rAddr: InetSocketAddress) extends SessionKeeperRequest
